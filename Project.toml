@@ -1,10 +1,18 @@
 name = "LiquidsDynamics"
 uuid = "ee594226-bf90-11e9-0512-4d00cc65c9b3"
 authors = ["Pablo Zubieta"]
-version = "0.1.0"
+version = "0.0.0"
 
 [compat]
-julia = "1.0"
+julia = "≥ 1.0.0"
+
+[deps]
+ApproximationGrids = "ba4ab162-c072-11e9-26be-e5ac2869e6e"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LiquidsStructure = "3b2fbd69-638f-58f2-a86a-379d5727c4f6"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
