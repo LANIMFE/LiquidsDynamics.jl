@@ -2,11 +2,18 @@ module LiquidsDynamics
 
 
 ### Imports
+
+# Load submodules code
+include("Projections.jl")
+include("LiquidsStructureGrids.jl")
+
+# Load the actual modules
 using Reexport
 using Parameters
-using Projections
-@reexport using LiquidsStructureGrids
 using LinearAlgebra: I
+
+using .Projections
+@reexport using .LiquidsStructureGrids
 
 
 ### Exports
@@ -30,8 +37,8 @@ function __init__()
     S = StructureFactorGrid(structure, grid)
     dynamics(S, 7.2, 1e6, n = 16)
 
-    @eval Projections begin
-        *(v::TR, p::MDProjections{2}) =
+    @eval begin
+        Projections.:*(v::TR, p::MDProjections{2}) =
             (@inbounds TR(v.t * (p.t + p.r[1]), v.r * p.r[2]))
     end
 end
