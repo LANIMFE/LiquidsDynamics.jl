@@ -7,7 +7,7 @@ version = "0.0.0"
 julia = "≥ 1.0.0"
 
 [deps]
-ApproximationGrids = "ba4ab162-c072-11e9-26be-e5ac2869e6e"
+ApproximationGrids = "4a901fcc-f81f-59f3-9077-2f09e0dff85c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LiquidsStructure = "3b2fbd69-638f-58f2-a86a-379d5727c4f6"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
