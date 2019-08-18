@@ -1,38 +1,33 @@
+const ErgodicParams = DynamicsVars
+
 function ergodic_parameters(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
-    avars, kvars, = initialize_asymptotics(S)
+    output, kvars, Z = initialize_asymptotics(S)
 
-    ergodic_parameters!(avars, kvars, S, tol)
+    ergodic_parameters!(output, kvars, Z, S, tol)
 end
 
-function ergodic_parameters!(avars, kvars, S, tol)
-    B  = K.^2 ./ ᵀ.(Λ)
-    W  = ergodic_weights(K, S, d, approx) # LDProjections
-    w  = ergodic_weight(D₀, η, d, approx) # TRVec
+function ergodic_parameters!(output, kvars, Z, S, tol)
+    @unpack f, fˢ = output
 
-    f  = fill(zero(T), m)
-    fˢ = fill(llist(T), m)
+    ζ∞ = υ * sum(w)
+    ζ′ = 2ζ∞
 
-    ft  = fill(zero(eltype(W)), m) # MDProjections
-
-    Δζ∞ = reduce_sum(w, W)
-    Δζ′ = 2Δζ∞
-
-    @inbounds while nonconvergent(Δζ′, Δζ∞, tol)
-        γ = D₀ * inv(Δζ∞)
-        Δζ′ = Δζ∞
+    @inbounds while nonconvergent(ζ′, ζ∞, tol)
+        γ = D₀ * inv(ζ∞)
+        ζ′ = ζ∞
 
         for j in eachindex(Λ)
             fₑ = ergodic_common(B, γ, j)
             f[j]  = ergodic_param(S[j], fₑ)
             fˢ[j] = ergodic_param(Sˢ[j], fₑ)
-            ft[j] = deltazeta_step(W[j], f[j], fˢ[j])
+            Z[j] = product(w[j], f[j], fˢ[j])
         end
 
-        Δζ∞ = reduce_sum(w, ft)
+        ζ∞ = υ * sum(Z)
     end
 
-    return f, fˢ, Δζ∞
+    return ErgodicParams(f, fˢ, ζ∞)
 end
 
 function initialize_asymptotics(structure)
@@ -43,8 +38,24 @@ function initialize_asymptotics(structure)
     K  = nodes(grid)
     S  = project.(f.(K))
     Sˢ = onesof(S)
+    B  = K.^2 ./ gett.(Λ)
+    Bˢ = nothing
     d  = dimensionality(liquid)
+    w  = weights(K, S, d, grid)
+    υ  = weight(one(D₀), liquid.η, d, grid)
     Λ  = lambdaof(liquid).(K)
 
+    svars = StaticVars(S, Sˢ, B, Bˢ, w, υ)
+    kvars = KernelStaticVars(svars, Λ)
+
     m  = length(S)
+    fˢ = zeros(eltype(Sˢ), m)
+    f  = zeros(eltype(S), m)
+    ζ∞ = nothing
+
+    output = ErgodicParams(f, fˢ, ζ∞)
+
+    Z = similar(w)
+
+    return output, kvars, Z
 end
