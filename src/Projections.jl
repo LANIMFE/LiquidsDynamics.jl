@@ -80,6 +80,7 @@ Base.eltype(::Type{TvR{T, N}}) where {T, N} = TRv{T, N}
 Base.eltype(::Type{P}) where {T, P <: AbstractProjections{T}} = T
 
 gett(v) = v.t
+gett(v::Number) = v
 getr(v) = v.r
 getr(v::Union{Number,SVector}) = v
 
