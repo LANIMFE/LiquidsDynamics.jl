@@ -6,12 +6,12 @@ end
 
 function asymptotics(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
-    avars, kvars, Z = initialize_asymptotics(S)
+    avars, kvars, Z, D₀ = initialize_asymptotics(S)
 
-    asymptotics!(avars, kvars, Z, S, tol)
+    asymptotics!(avars, kvars, Z, S, D₀, tol)
 end
 
-function asymptotics!(avars, kvars, Z, S, tol)
+function asymptotics!(avars, kvars, Z, S, D₀, tol)
     @unpack f, fˢ = avars
     @unpack svars, Λ = kvars
     @unpack S, Sˢ, B, w, υ = svars
@@ -63,7 +63,7 @@ function initialize_asymptotics(structure)
 
     Z = similar(w)
 
-    return avars, kvars, Z
+    return avars, kvars, Z, D₀
 end
 
 memory_term(β, γ) = β * γ
