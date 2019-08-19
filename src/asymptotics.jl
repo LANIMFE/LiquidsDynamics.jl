@@ -1,4 +1,8 @@
-const AsymptoticVars = DynamicsVars
+struct AsymptoticVars{T, U, V}
+    f ::T
+    fˢ::U
+    ζ∞::V
+end
 
 function asymptotics(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
