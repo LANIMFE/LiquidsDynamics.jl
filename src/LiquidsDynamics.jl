@@ -17,7 +17,7 @@ using .Projections
 
 
 ### Exports
-export dynamics, dynamics!, initialize_dynamics
+export asymptotics, dynamics, dynamics!, initialize_dynamics
 
 
 ### Implementation
@@ -26,6 +26,7 @@ include("initialization.jl")
 include("globaldynamics.jl")
 include("shorttimes.jl")
 include("intermediatetimes.jl")
+include("asymptotics.jl")
 
 
 function __init__()
