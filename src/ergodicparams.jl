@@ -1,14 +1,14 @@
-const ErgodicParams = DynamicsVars
+const AsymptoticVars = DynamicsVars
 
-function ergodic_parameters(S; tol = sqrt(eps()))
+function asymptotics(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
-    output, kvars, Z = initialize_asymptotics(S)
+    avars, kvars, Z = initialize_asymptotics(S)
 
-    ergodic_parameters!(output, kvars, Z, S, tol)
+    asymptotics!(avars, kvars, Z, S, tol)
 end
 
-function ergodic_parameters!(output, kvars, Z, S, tol)
-    @unpack f, fˢ = output
+function asymptotics!(avars, kvars, Z, S, tol)
+    @unpack f, fˢ = avars
 
     ζ∞ = υ * sum(w)
     ζ′ = 2ζ∞
@@ -18,16 +18,16 @@ function ergodic_parameters!(output, kvars, Z, S, tol)
         ζ′ = ζ∞
 
         for j in eachindex(Λ)
-            fₑ = ergodic_common(B, γ, j)
-            f[j]  = ergodic_param(S[j], fₑ)
-            fˢ[j] = ergodic_param(Sˢ[j], fₑ)
+            Sₑ = memory_term(B[j], γ)
+            f[j]  = ergodic_param(S[j], Sₑ)
+            fˢ[j] = ergodic_param(Sˢ[j], Sₑ)
             Z[j] = product(w[j], f[j], fˢ[j])
         end
 
         ζ∞ = υ * sum(Z)
     end
 
-    return ErgodicParams(f, fˢ, ζ∞)
+    return AsymptoticVars(f, fˢ, ζ∞)
 end
 
 function initialize_asymptotics(structure)
@@ -53,9 +53,35 @@ function initialize_asymptotics(structure)
     f  = zeros(eltype(S), m)
     ζ∞ = nothing
 
-    output = ErgodicParams(f, fˢ, ζ∞)
+    avars = AsymptoticVars(f, fˢ, ζ∞)
 
     Z = similar(w)
 
-    return output, kvars, Z
+    return avars, kvars, Z
+end
+
+memory_term(β, γ) = β * γ
+#
+function memory_term(β, γ::TR)
+    t = β * gett(γ)
+    return TR(t, t + 2 * getr(γ))
+end
+
+ergodic_param(Sⱼ, Sₑ) = Sⱼ / (Sⱼ + Sₑ)
+#
+function ergodic_param(Sⱼ::DProjections{3}, Sₑ)
+    t = Sⱼ.t / (Sⱼ.t + Sₑ.t)
+    @inbounds begin
+        r₁ = Sⱼ.r[1] / (Sⱼ.r[1] + Sₑ.r)
+        r₂ = Sⱼ.r[2] / (Sⱼ.r[2] + Sₑ.r)
+    end
+    return DProjections(t, SVector(r₁, r₂))
+end
+#
+function ergodic_param(Sⱼ::LDProjections{2}, Sₑ)
+    t = Sⱼ.t / (Sⱼ.t + Sₑ.t)
+    @inbounds begin
+        r₁ = Sⱼ.r[1] / (Sⱼ.r[1] + Sₑ.r)
+    end
+    return LDProjections(t, SVector(r₁))
 end
