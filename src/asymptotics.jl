@@ -9,6 +9,8 @@ end
 
 function asymptotics!(avars, kvars, Z, S, tol)
     @unpack f, fˢ = avars
+    @unpack svars, Λ = kvars
+    @unpack S, Sˢ, B, w, υ = svars
 
     ζ∞ = υ * sum(w)
     ζ′ = 2ζ∞
