@@ -40,12 +40,12 @@ function initialize_asymptotics(structure)
     K  = nodes(grid)
     S  = project.(f.(K))
     Sˢ = onesof(S)
-    B  = K.^2 ./ gett.(Λ)
-    Bˢ = nothing
     d  = dimensionality(liquid)
     w  = weights(K, S, d, grid)
     υ  = weight(one(D₀), liquid.η, d, grid)
     Λ  = lambdaof(liquid).(K)
+    B  = K.^2 ./ gett.(Λ)
+    Bˢ = nothing
 
     svars = StaticVars(S, Sˢ, B, Bˢ, w, υ)
     kvars = KernelStaticVars(svars, Λ)
