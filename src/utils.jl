@@ -19,7 +19,7 @@ Base.show(io::IO, ::MIME"text/plain", A::Ones) = print(io, typeof(A), "()")
 ### Interpolation function for the SCGLE theory
 struct Lambda{T}
     kᶜ::T
-    
+
     Lambda{T}(k::T) where {T} = new(k)
 end
 
@@ -31,10 +31,12 @@ lambdaof(::DipolarHardSpheres) = Lambda(TR(1.305, Inf))
 
 (λ::Lambda)(k) = inv(I + (k * inv(λ.kᶜ))^2)
 
+# Diffusion coefficents. This should be eventually moved to LiquidsStructure.jl
 diffusion_coeff(::HardDisks) = 1
 diffusion_coeff(::HardSpheres) = 1
 diffusion_coeff(::DipolarHardSpheres) = TR(1, 1)
 
+# Static quantities
 bsfactors(D₀, K, S) = D₀ .* K.^2
 bsfactors(D₀::TR, K, S::Vector{T}) where {T} = TvR(D₀.t .* K.^2, D₀.r * llist(T))
 
@@ -48,33 +50,33 @@ end
 function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{0, T}}
     w = fill(MDProjections(zero(T)), length(K))
     ws = ApproximationGrids.weights(grid)
-    
+
     for i in eachindex(K)
         t = ws[i] * K[i]^4 * (1 - inv(S[i].t))^2
         w[i] = MDProjections(t)
-    end    
-    
+    end
+
     return w
 end
 
 function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{2, T}}
     w = fill(MDProjections(zero(T), zero(SVector{2, T})), length(K))
     ws = ApproximationGrids.weights(grid)
-    
+
     for i in eachindex(K)
         Sᵢ = S[i]
         k² = K[i]^2
         wᵣ = ws[i] * k²
         wₜ = wᵣ * k²
-        
+
         # Projections components of the weights
         t  = wₜ * (1 - inv(Sᵢ.t))^2
         r₀ = 3wₜ * (1 - inv(Sᵢ.r[1]))^2
         r₁ = 6wᵣ * ((Sᵢ.r[1] - 1) * inv(Sᵢ.r[2]))^2
-        
+
         w[i] = MDProjections(t, SVector(r₀, r₁))
     end
-    
+
     return w
 end
 
