@@ -11,12 +11,12 @@ time.
 
 The algorithm is based on the theoretical model known as Self-consistent
 Generalized Langevin Equation.  The precision of the method can be controlled
-by the keyword arguments `n`, `Δτ` and `tol`, which correspond to the number of
-points in the time grid per 'time decade', the initial time grid spacing, and
-the convergence of the relative tolerance for the memory function `ζ`,
+by the keyword arguments `n`, `Δτ` and `rtol`, which correspond to the number
+of points in the time grid per 'time decade', the initial time grid spacing,
+and the convergence of the relative tolerance for the memory function `ζ`,
 respectively.
 """
-function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, tol = sqrt(eps()))
+function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = eps())
     # Number of time points for which the short-times approximation is used.
     @assert n ≥ (n₀ = 8)
     # Dynamical variables, memory kernel variables and auxiliar variables.
@@ -24,15 +24,14 @@ function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, tol = sqrt(eps()))
 
     # The current function is just an initialization routine,
     # the real work starts here.
-    return dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
+    return dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
 end
 
-function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
-
+function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
     # Use a short-times approximation initially.
     approximate!(dvars, kvars.svars, auxvars.Z, Δτ, n₀)
     # Fill the first time grid employing the SCGGLE equations.
-    solve!(dvars, kvars, auxvars, Δτ, n₀ + 1, n, tol)
+    solve!(dvars, kvars, auxvars, Δτ, n₀ + 1, n, rtol)
     # Allocate the output with the solution for the first-decade time grid.
     #
     # TODO: This could be improved moving the following line to `dynamics`,
@@ -49,7 +48,7 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
         Δτ *= 2
         D′ = output.D.b
         decimate!(dvars)
-        solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
+        solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
         update!(output, dvars, S.grid, k, Δτ, n₀, n)
     end
 
@@ -59,8 +58,8 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
     # should the be zero, so we use this fact.  Otherwise, we keep iterating
     # but stop storing the result.
     avars, akvars, D₀ = initialize_asymptotics(S)
-    asymp = asymptotics!(avars, akvars, auxvars.Z, S, D₀, last(dvars.ζ), tol)
-    asymptotic_D!(output.D, D′, asymp.ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, tol)
+    A = asymptotics!(avars, akvars, auxvars.Z, S, D₀, last(dvars.ζ), rtol)
+    asymptotic_D!(output.D, D′, A.ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
 
     return output
 end

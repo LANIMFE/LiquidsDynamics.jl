@@ -41,16 +41,16 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
     return AsymptoticVars(f, fˢ, ζ∞)
 end
 
-function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, tol)
+function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
     if !iszero(ζ∞)
         return D.b = zero(D.b)
     end
 
-    while is_nonconvergent(D′, D.b, tol)
+    while is_nonconvergent(D′, D.b, rtol) && inv(abs(D.b)) > atol
         Δτ *= 2
         D′ = D.b
         decimate!(dvars)
-        solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
+        solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
         D.b = D.b + trapz(Δτ, view(dvars.ζ, n₀:n))
     end
 

@@ -221,6 +221,8 @@ Base.one(::Type{LDProjections{0, T}}) where {T} = LDProjections(one(T))
 Base.one(::Type{LDProjections{L, T}}) where {L, T} = LDProjections(one(T), ones(SVector{L, T}))
 Base.one(p::AbstractProjections) = constructorname(p)(one(p.t), ones(p.r))
 
+Base.abs(v::TR) = sqrt(v.t^2 + v.r^2)
+
 Base.muladd(x::Number, p::DProjections{0}, q::DProjections{0}) = DProjections(muladd(x, p.t, q.t))
 function Base.muladd(x::Number, p::DProjections{2}, q::DProjections{2})
     t = muladd(x, p.t, q.t)
