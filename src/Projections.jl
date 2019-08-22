@@ -162,7 +162,7 @@ end
 Base.:*(p::DProjections, q::LDProjections) = q * p
 
 product(x, y, z) = x * y * z
-product(p::MDProjections{0}, q::DProjections{0}, r::LDProjections{0}) = MDProjections(p.t * q.t * r.t)    
+product(p::MDProjections{0}, q::DProjections{0}, r::LDProjections{0}) = MDProjections(p.t * q.t * r.t)
 function product(p::MDProjections{2}, q::DProjections{2}, r::LDProjections{1})
     t = p.t * q.t * r.t
     @inbounds begin
@@ -200,10 +200,13 @@ Base.:+(v::TR, p::DProjections)     = DProjections(v.t + p.t, v.r .+ p.r)
 Base.:+(v::TR, p::LDProjections{0}) = LDProjections(v.t + p.t)
 Base.:+(v::TR, p::LDProjections)    = LDProjections(v.t + p.t, v.r .+ p.r)
 
+Base.:-(J::UniformScaling, v::TR) = TR(J.λ - v.t, J.λ - v.r)
+
 Base.:^(v::TR, n::Integer) = TR(v.t^n, v.r^n)
 Base.inv(v::TR) = TR(inv(v.t), inv(v.r))
 
-Base.zero(v::TR) = TR(zero(v.t), zero(v.r))
+Base.zero(::Type{TR{T}}) where {T} = (o = zero(T); TR(o, o))
+Base.zero(v::TR{T}) where {T} = (o = zero(T); TR(o, o))
 
 Base.zero(::Type{ DProjections{0, T}}) where {T} = DProjections(zero(T))
 Base.zero(::Type{LDProjections{0, T}}) where {T} = LDProjections(zero(T))

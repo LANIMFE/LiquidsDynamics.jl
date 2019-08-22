@@ -6,8 +6,12 @@ end
 
 function asymptotics(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
-    avars, kvars, Z, D₀ = initialize_asymptotics(S)
-    ζ′ = kvars.svars.υ * sum(kvars.svars.w)
+    avars, kvars, D₀ = initialize_asymptotics(S)
+
+    υ  = kvars.svars.υ
+    w  = kvars.svars.w
+    Z  = similar(w)
+    ζ′ = υ * sum(w)
 
     asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
 end
@@ -20,7 +24,7 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
     ζ∞ = ζ′
     ζ′ = 2ζ′
 
-    @inbounds while nonconvergent(ζ′, ζ∞, tol)
+    @inbounds while is_nonconvergent(ζ′, ζ∞, tol)
         γ = D₀ * inv(ζ∞)
         ζ′ = ζ∞
 
@@ -35,6 +39,22 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
     end
 
     return AsymptoticVars(f, fˢ, ζ∞)
+end
+
+function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, tol)
+    if !iszero(ζ∞)
+        return D.b = zero(D.b)
+    end
+
+    while is_nonconvergent(D′, D.b, tol)
+        Δτ *= 2
+        D′ = D.b
+        decimate!(dvars)
+        solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
+        D.b = D.b + trapz(Δτ, view(dvars.ζ, n₀:n))
+    end
+
+    return D.b = inv(D.b)
 end
 
 function initialize_asymptotics(structure)
@@ -62,9 +82,7 @@ function initialize_asymptotics(structure)
 
     avars = AsymptoticVars(f, fˢ, ζ∞)
 
-    Z = similar(w)
-
-    return avars, kvars, Z, D₀
+    return avars, kvars, D₀
 end
 
 function asymptotics_weights(K, S, d, grid)

@@ -36,7 +36,7 @@ diffusion_coeff(::HardDisks) = 1
 diffusion_coeff(::HardSpheres) = 1
 diffusion_coeff(::DipolarHardSpheres) = TR(1, 1)
 
-# Static quantities
+# Static auxiliar quantities
 bsfactors(D₀, K, S) = D₀ .* K.^2
 bsfactors(D₀::TR, K, S::Vector{T}) where {T} = TvR(D₀.t .* K.^2, D₀.r * llist(T))
 
@@ -120,6 +120,7 @@ end
 init_conv(ζ) = nothing
 init_conv(ζ::Vector{TR{T}}) where {T} = zeros(T, length(ζ))
 
+# TODO: Try with Simpson integration
 function trapz(h, v)
     n = length(v)
     @inbounds begin

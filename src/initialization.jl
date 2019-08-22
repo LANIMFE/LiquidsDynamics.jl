@@ -34,12 +34,15 @@ end
 #    D ::Vector{T} # diffusion coefficient
 #    W ::Vector{T} # mean square displacement
 #end
+mutable struct DiffusionCoefficient{T}
+    b::T
+end
 
 struct DynamicsOutput{T, U <: DynamicsVars, V}
-    n::Int      # number of time-grid points per decade
-    τ::T
-    dvars::U
-    Dₗ::Ref{V}  # long-time diffusion coefficient limit
+    n::Int   # number of time-grid points per decade
+    τ::T     # time grid
+    dvars::U # dynamics variables
+    D::DiffusionCoefficient{V} # asymptotic value
 end
 
 function DynamicsOutput(vars, grid, k, Δτ, n)
@@ -49,25 +52,24 @@ function DynamicsOutput(vars, grid, k, Δτ, n)
     ζ  = copy(vars.ζ)
 
     dvars = DynamicsVars(F, Fˢ, ζ)
-    D = I + trapz(Δτ, ζ)
+    b = I + trapz(Δτ, ζ)
+    D = DiffusionCoefficient(b)
 
-    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(D)}(n, τ, dvars, Ref(D))
+    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(b)}(n, τ, dvars, D)
 end
 
-function update!(output, vars, grid, k, t, Δτ, n₀, n)
-    @unpack τ, dvars, Dₗ = output
+function update!(output, vars, grid, k, Δτ, n₀, n)
+    @unpack τ, dvars, D = output
     @unpack F, Fˢ, ζ = dvars
 
-    ζₙ = view(vars.ζ, n₀:n)
+    # TODO: Instead of interpolating, use the memory kernel `ζ` already
+    #       calculated.
+    append!(τ, Δτ * (n₀:n))
+    append!(F, (interpolate(grid, vars.F[i, :], k) for i = n₀:n))
+    append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
+    append!(ζ, view(vars.ζ, n₀:n))
 
-    if n * Δτ < t
-        append!(τ, Δτ * (n₀:n))
-        append!(F, (interpolate(grid, vars.F[i, :], k) for i = n₀:n))
-        append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
-        append!(ζ, ζₙ)
-    end
-
-    Dₗ[] = Dₗ[] + trapz(Δτ, ζₙ)
+    D.b = D.b + trapz(Δτ, view(vars.ζ, (n₀ - 1):n))
 
     return output
 end
@@ -98,7 +100,7 @@ function initialize_dynamics(structure, n)
     Fˢ = zeros(eltype(Sˢ), n, m)
     F  = zeros(eltype(S), n, m)
     ζ  = fill(zero(υ), n)
-    #D   = copy(ζ)
+    #D  = copy(ζ)
 
     dvars = DynamicsVars(F, Fˢ, ζ)
 

@@ -26,7 +26,6 @@ function solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
     @unpack S, Sˢ, B, Bˢ, w, υ = svars
     @unpack A, Aˢ, Z, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, Δζ, ζoζ = auxvars
 
-    #đ = inv(1 / Δτ + Δζ[1])
     fill_aux_svars!(A, Aˢ, ΔF₁, ΔFˢ₁, S, Sˢ, Bˢ, Λ, F, Fˢ, ζ[1], Δτ)
     fill_aux_tvars!(Δζ, ζoζ, ζ, n₀ - 1)
 
@@ -35,7 +34,6 @@ function solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
         perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, tol)
         diff!(Δζ, ζ, i)
         conv!(ζoζ, ζ, i)
-        #dynamical_properties!(D, Δζ, ζ, đ, Δτ, i)
     end
 
     return dvars
@@ -134,11 +132,17 @@ function perform_linstep!(Fᵢ, Fˢᵢ, F, Fˢ, ΔF₁, ΔFˢ₁, B, Bˢ, ζ, Δ
     return Fᵢ, Fˢᵢ
 end
 
-index_lin_svars(Λ, B, Bˢ, ΔF₁, ΔFˢ₁, Δτ, j) = (Λ[j], nothing, nothing, nothing, nothing, nothing)
-index_lin_svars(Λ::Vector{<:TR}, B, Bˢ, ΔF₁, ΔFˢ₁, Δτ, j) = (Λ[j], B[j], Bˢ[j], ΔF₁[j], ΔFˢ₁[j], Δτ * Λ[j].t * Λ[j].r)
+index_lin_svars(Λ, B, Bˢ, ΔF₁, ΔFˢ₁, Δτ, j) =
+    (Λ[j], nothing, nothing, nothing, nothing, nothing)
+#
+index_lin_svars(Λ::Vector{<:TR}, B, Bˢ, ΔF₁, ΔFˢ₁, Δτ, j) =
+    (Λ[j], B[j], Bˢ[j], ΔF₁[j], ΔFˢ₁[j], Δτ * Λ[j].t * Λ[j].r)
 
-index_lin_tvars(Δζ, ζ, ζoζ::Nothing, Δτ, l, i) = (Δζ[l], nothing, nothing, nothing)
-index_lin_tvars(Δζ, ζ, ζoζ, Δτ, l, i) = (Δζ[l], -Δτ * ζ[l], ζ[i].t * ζ[l].r, ζoζ[l - 1] - ζoζ[l])
+index_lin_tvars(Δζ, ζ, ζoζ::Nothing, Δτ, l, i) =
+    (Δζ[l], nothing, nothing, nothing)
+#
+index_lin_tvars(Δζ, ζ, ζoζ, Δτ, l, i) =
+    (Δζ[l], -Δτ * ζ[l], ζ[i].t * ζ[l].r, ζoζ[l - 1] - ζoζ[l])
 
 initialize_linterm(F₁ⱼ, ζₙ, ζoζ::Nothing, n) = F₁ⱼ * ζₙ
 #
@@ -184,7 +188,7 @@ function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ,
     F₁ = view_firststep(F, 1)
     Fˢ₁ = view_firststep(Fˢ, 1)
 
-    @inbounds while nonconvergent(ζᵢ, ζ[i], tol)
+    @inbounds while is_nonconvergent(ζᵢ, ζ[i], tol)
         ζᵢ = ζ[i]
 
         for j in eachindex(Λ)
@@ -203,8 +207,8 @@ init_guess(ζ, i) = ζ[i - 1]
 view_firststep(F, i) = nothing
 view_firststep(F::Array{<:Projections.AbstractProjections}, i) = view(F, i, :)
 
-nonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
-nonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
+is_nonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
+is_nonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
 
 compute_nlmemory(Λ, ζᵢ, ζ₁, B, Bˢ, Δτ, j) = (Λ[j] * ζᵢ, nothing, nothing)
 #
