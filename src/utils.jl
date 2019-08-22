@@ -119,3 +119,11 @@ end
 
 init_conv(ζ) = nothing
 init_conv(ζ::Vector{TR{T}}) where {T} = zeros(T, length(ζ))
+
+function trapz(h, v)
+    n = length(v)
+    @inbounds begin
+        Σ = sum(v[i] for i = 2:n) + (v[1] + v[end]) / 2
+    end
+    return h * Σ
+end

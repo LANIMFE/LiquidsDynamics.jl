@@ -30,16 +30,16 @@ struct DynamicsAuxVars{T, U, V, W, X}
     ζoζ ::X
 end
 
-struct DynamicalProperties{T}
-    #D ::Vector{T} # diffusion coefficient
-    #W ::Vector{T} # mean square displacement
-    Dₗ::Ref{T}    # long-time diffusion coefficient limit
-end
+#struct DynamicalProperties{T}
+#    D ::Vector{T} # diffusion coefficient
+#    W ::Vector{T} # mean square displacement
+#end
 
-struct DynamicsOutput{T, U <: DynamicsVars}
+struct DynamicsOutput{T, U <: DynamicsVars, V}
+    n::Int      # number of time-grid points per decade
     τ::T
     dvars::U
-    n::Int # number of time-grid points per decade
+    Dₗ::Ref{V}  # long-time diffusion coefficient limit
 end
 
 function DynamicsOutput(vars, grid, k, Δτ, n)
@@ -47,25 +47,27 @@ function DynamicsOutput(vars, grid, k, Δτ, n)
     F  = collect(interpolate(grid, vars.F[i, :], k) for i = 1:n)
     Fˢ = collect(interpolate(grid, vars.Fˢ[i, :], k) for i = 1:n)
     ζ  = copy(vars.ζ)
-    #Dₗ = Ref(inv(1 + Δτ * sum(Δζ)))
 
     dvars = DynamicsVars(F, Fˢ, ζ)
-    #oprops = OtherDynamicalProperties(#=D, W, =#Dₗ)
+    D = I + trapz(Δτ, ζ)
 
-    return DynamicsOutput{typeof(τ), typeof(dvars)}(τ, dvars, n)
+    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(D)}(n, τ, dvars, Ref(D))
 end
 
-function update!(output, vars, grid, k, Δτ, n₀, n)
-    @unpack τ, dvars = output
+function update!(output, vars, grid, k, t, Δτ, n₀, n)
+    @unpack τ, dvars, Dₗ = output
     @unpack F, Fˢ, ζ = dvars
 
     ζₙ = view(vars.ζ, n₀:n)
 
-    append!(τ, Δτ * (n₀:n))
-    append!(F, (interpolate(grid, vars.F[i, :], k) for i = n₀:n))
-    append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
-    append!(ζ, ζₙ)
-    #oprops.Dₗ[] = inv(inv(oprops.Dₗ[]) + Δτ * sum(Δζₙ))
+    if n * Δτ < t
+        append!(τ, Δτ * (n₀:n))
+        append!(F, (interpolate(grid, vars.F[i, :], k) for i = n₀:n))
+        append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
+        append!(ζ, ζₙ)
+    end
+
+    Dₗ[] = Dₗ[] + trapz(Δτ, ζₙ)
 
     return output
 end

@@ -16,7 +16,19 @@ points in the time grid per 'time decade', the initial time grid spacing, and
 the convergence of the relative tolerance for the memory function `ζ`,
 respectively.
 """
-function dynamics(S, k, t; Δτ = 1e-7, n = 128, tol = sqrt(eps()))
+#function dynamics(S, k, t; Δτ = 1e-7, n = 128, tol = sqrt(eps()))
+#    # Number of time points for which the short-times approximation is used
+#    @assert n ≥ (n₀ = 8)
+#    # Dynamical variables, memory kernel variables and auxiliar variables
+#    dvars, kvars, auxvars = initialize_dynamics(S, n)
+#
+#    # The current function is just an initialization routine,
+#    # the real work starts here
+#    return dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
+#end
+
+function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, tol = sqrt(eps()))
+
     # Number of time points for which the short-times approximation is used
     @assert n ≥ (n₀ = 8)
     # Dynamical variables, memory kernel variables and auxiliar variables
@@ -40,14 +52,20 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, tol)
     # the previous grid keeping the first-half information, we only need to
     # compute the dynamics for the second half of each new time grid.
     n₀ = div(n, 2) + 1
-    #Dₗ = output.oprops.Dₗ
+    D′ = one(output.Dₗ[])
     while n * Δτ < t
         Δτ *= 2
+        D′ = output.Dₗ[]
         decimate!(dvars)
         solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
-        update!(output, dvars, S.grid, k, Δτ, n₀, n)
+        update!(output, dvars, S.grid, k, t, Δτ, n₀, n)
     end
+
+    output.Dₗ[] = inv(output.Dₗ[])
 
     #write(output)
     return output
 end
+
+isbig(D, tol) = D > tol
+isbig(D::TR, tol) = D.t > tol && D.r > tol
