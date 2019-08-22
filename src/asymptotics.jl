@@ -7,17 +7,18 @@ end
 function asymptotics(S; tol = sqrt(eps()))
     # Dynamical variables, memory kernel variables and auxiliar variables
     avars, kvars, Z, D₀ = initialize_asymptotics(S)
+    ζ′ = kvars.svars.υ * sum(kvars.svars.w)
 
-    asymptotics!(avars, kvars, Z, S, D₀, tol)
+    asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
 end
 
-function asymptotics!(avars, kvars, Z, S, D₀, tol)
+function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
     @unpack f, fˢ = avars
     @unpack svars, Λ = kvars
     @unpack S, Sˢ, B, w, υ = svars
 
-    ζ∞ = υ * sum(w)
-    ζ′ = 2ζ∞
+    ζ∞ = ζ′
+    ζ′ = 2ζ′
 
     @inbounds while nonconvergent(ζ′, ζ∞, tol)
         γ = D₀ * inv(ζ∞)
