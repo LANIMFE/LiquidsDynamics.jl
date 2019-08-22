@@ -42,7 +42,7 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
 end
 
 function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
-    if !iszero(ζ∞)
+    if !any_iszero(ζ∞)
         return D.b = zero(D.b)
     end
 
@@ -52,7 +52,7 @@ function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rto
         decimate!(dvars)
         solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
         D.b = D.b + trapz(Δτ, view(dvars.ζ, n₀:n))
-        if anyisless(inv(D.b), atol)
+        if any_isless(inv(D.b), atol)
             break
         end
     end

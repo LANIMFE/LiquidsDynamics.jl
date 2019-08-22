@@ -221,7 +221,11 @@ Base.one(::Type{LDProjections{0, T}}) where {T} = LDProjections(one(T))
 Base.one(::Type{LDProjections{L, T}}) where {L, T} = LDProjections(one(T), ones(SVector{L, T}))
 Base.one(p::AbstractProjections) = constructorname(p)(one(p.t), ones(p.r))
 
-anyisless(v::TR{<:Number}, x) = v.t < x || v.r < x
+any_iszero(v) = iszero(v)
+any_iszero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
+
+any_isless(v, x) = v < x
+any_isless(v::TR{<:Number}, x) = v.t < x || v.r < x
 
 Base.muladd(x::Number, p::DProjections{0}, q::DProjections{0}) = DProjections(muladd(x, p.t, q.t))
 function Base.muladd(x::Number, p::DProjections{2}, q::DProjections{2})
@@ -276,8 +280,8 @@ llist(::Type{DProjections{2, T}}) where {T} = SVector(T(2))
 
 ### Exports
 export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
-       checksizes, getr, gett, getsvecornum, llist, lptype, product, project,
-       reduce_dof
+       any_isless, any_iszero, checksizes, getr, gett, getsvecornum, llist,
+       lptype, product, project, reduce_dof
 
 
 end # module
