@@ -1,13 +1,12 @@
-"""    dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, tol = 1e-6)
+"""    dynamics(S, k; Δτ = 1e-7, t = 1e7, n = 128, rtol = sqrt(eps()), atol = 0.0)
 
 Computes the dynamical properties of a liquid `S` with structure factor
 approximated over a finite grid.  In particular it computes the intermediate
-scattering function `F` and the self intermediate scattering function `Fs` at a
-point `k` of the wavevector space as functions of the correlation time, up to a
-time `t`.  It also computes the memory function `ζ` of the Generalized
-Langevin Equation, which can later be used to estimate the diffusion
-coefficient and the mean square displacement as functions of the correlation
-time.
+scattering function `F` and the self intermediate scattering function `Fs` at
+wavenumber `k` as functions of the correlation time, up to a time `t` (`1e7` by
+default).  It also computes the memory function `ζ` of the Generalized Langevin
+Equation, which can later be used to estimate the diffusion coefficient and the
+mean square displacement as functions of the correlation time.
 
 The algorithm is based on the theoretical model known as Self-consistent
 Generalized Langevin Equation.  The precision of the method can be controlled
@@ -15,8 +14,12 @@ by the keyword arguments `n`, `Δτ` and `rtol`, which correspond to the number
 of points in the time grid per 'time decade', the initial time grid spacing,
 and the convergence of the relative tolerance for the memory function `ζ`,
 respectively.
+
+This function also returns the long-time-limit mobility `b` of the system up to
+an absolute precision specified by `atol`. By default this value is set to zero
+so the algorithm will end until `b` fully converges.
 """
-function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = eps())
+function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = 0.0)
     # Number of time points for which the short-times approximation is used.
     @assert n ≥ (n₀ = 8)
     # Dynamical variables, memory kernel variables and auxiliar variables.
@@ -43,23 +46,24 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
     # the previous grid keeping the first-half information, we only need to
     # compute the dynamics for the second half of each new time grid.
     n₀ = div(n, 2) + 1
-    D′ = one(output.D.b)
+    b′ = one(output.b)
     while 2n * Δτ < t
         Δτ *= 2
-        D′ = output.D.b
+        b′ = output.b
         decimate!(dvars)
         solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
         update!(output, dvars, S.grid, k, Δτ, n₀, n)
     end
 
     # Reaching the time `t` won't generally guarantee that the asymptotic value
-    # for the diffusion coefficient has converged.  If the asymptotic value of
-    # the memory kernel is finite and greater than zero, we know that `Dₗ`
-    # should the be zero, so we use this fact.  Otherwise, we keep iterating
-    # but stop storing the result.
+    # for the mobility `b` has converged.  If the asymptotic value of the
+    # memory kernel is finite and greater than zero, we know that `b` should
+    # the be zero, so we use this fact.  Otherwise, we keep iterating until the
+    # convergence of `b` up to absolute precision `atol`, but no longer store
+    # the solutions to the SCGLE.
     avars, akvars, D₀ = initialize_asymptotics(S)
     A = asymptotics!(avars, akvars, auxvars.Z, S, D₀, last(dvars.ζ), rtol)
-    asymptotic_D!(output.D, D′, A.ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
+    asymptotic_mobility!(output.b, b′, A.ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
 
     return output
 end

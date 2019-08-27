@@ -34,15 +34,12 @@ end
 #    D ::Vector{T} # diffusion coefficient
 #    W ::Vector{T} # mean square displacement
 #end
-mutable struct DiffusionCoefficient{T}
-    b::T
-end
 
 struct DynamicsOutput{T, U <: DynamicsVars, V}
-    n::Int   # number of time-grid points per decade
-    τ::T     # time grid
-    dvars::U # dynamics variables
-    D::DiffusionCoefficient{V} # asymptotic value
+    n::Int         # number of time-grid points per decade
+    τ::T           # time grid
+    dvars::U       # dynamics variables
+    b::Mutable{V} # asymptotic mobility
 end
 
 function DynamicsOutput(vars, grid, k, Δτ, n)
@@ -52,14 +49,14 @@ function DynamicsOutput(vars, grid, k, Δτ, n)
     ζ  = copy(vars.ζ)
 
     dvars = DynamicsVars(F, Fˢ, ζ)
-    b = I + trapz(Δτ, ζ)
-    D = DiffusionCoefficient(b)
+    x = I + integrate(Δτ, ζ)
+    b = Mutable(x)
 
-    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(b)}(n, τ, dvars, D)
+    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(x)}(n, τ, dvars, b)
 end
 
 function update!(output, vars, grid, k, Δτ, n₀, n)
-    @unpack τ, dvars, D = output
+    @unpack τ, dvars, b = output
     @unpack F, Fˢ, ζ = dvars
 
     # TODO: Instead of interpolating, use the memory kernel `ζ` already
@@ -69,7 +66,7 @@ function update!(output, vars, grid, k, Δτ, n₀, n)
     append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
     append!(ζ, view(vars.ζ, n₀:n))
 
-    D.b = D.b + trapz(Δτ, view(vars.ζ, (n₀ - 1):n))
+    b.x = b.x + integrate(Δτ, view(vars.ζ, (n₀ - 1):n))
 
     return output
 end

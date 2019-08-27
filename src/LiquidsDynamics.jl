@@ -17,16 +17,24 @@ using LinearAlgebra: I
 
 
 ### Exports
-export asymptotics, dynamics, dynamics!, initialize_dynamics
+export asymptotics, asymptotics!, dynamics, dynamics!, initialize_asymptotics,
+       initialize_dynamics
 
 
 ### Implementation
+abstract type SCGLE end
+abstract type Dynamics    <: SCGLE end
+abstract type Asymptotics <: SCGLE end
+
 include("utils.jl")
-include("initialization.jl")
-include("globaldynamics.jl")
-include("shorttimes.jl")
-include("intermediatetimes.jl")
-include("asymptotics.jl")
+include("dynamics/dynamics.jl")
+include("dynamics/init.jl")
+include("dynamics/shorttimes.jl")
+include("dynamics/intermediatetimes.jl")
+include("dynamics/utils.jl")
+include("asymptotics/asymptotics.jl")
+include("asymptotics/init.jl")
+include("asymptotics/utils.jl")
 
 
 function __init__()

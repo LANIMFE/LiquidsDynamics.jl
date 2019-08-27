@@ -1,25 +1,3 @@
-function decimate!(V::Vector)
-    m = length(V)
-    @inbounds for i = 2:2:m
-        V[div(i, 2)] = (V[i - 1] + V[i]) / 2
-    end
-    return V
-end
-
-function decimate!(M::Matrix)
-    m = size(M, 1)
-    for i = 2:2:m
-        @views M[div(i, 2), :] .= (M[i, :] .+ M[i - 1, :]) ./ 2
-    end
-    return M
-end
-
-function decimate!(vars::DynamicsVars)
-    decimate!(vars.F)
-    decimate!(vars.Fˢ)
-    decimate!(vars.ζ)
-end
-
 function solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
     @unpack F, Fˢ, ζ = dvars
     @unpack svars, Λ = kvars
@@ -91,22 +69,8 @@ function fill_aux_tvars!(Δζ, ζoζ, ζ, n)
     return Δζ
 end
 
-diff!(Δζ, ζ, i) = (Δζ[i] = ζ[i - 1] - ζ[i])
 
-conv!(ζoζ::Nothing, ζ, n) = nothing
-function conv!(ζoζ::Vector{T}, ζ, n) where {T}
-    nₕ = n ÷ 2
-    ζoζn = zero(T)
-    for i = 1:nₕ
-        ζoζn += (ζ[i].t * ζ[n - i + 1].r) + (ζ[i].r * ζ[n - i + 1].t)
-    end
-    if isodd(n)
-        ζoζn += ζ[nₕ + 1].t * ζ[nₕ + 1].r
-    end
-    return ζoζ[n] = ζoζn
-end
-
-## Linear contributions of the SCGLE equations
+### Linear contributions of the SCGLE equations
 function perform_linstep!(Fᵢ, Fˢᵢ, F, Fˢ, ΔF₁, ΔFˢ₁, B, Bˢ, ζ, Δζ, ζoζ, Λ, Δτ, n)
     n₋ = n - 1
     ζn₋ = ζ[n₋]
@@ -180,7 +144,8 @@ function reduce_linterm(Fₐ, λ, Fᵢⱼ, Δτ, Δτλλ)
     return Projections.constructorname(F̃)(t, r)
 end
 
-## Nonlinear contributions of the SCGLE equations
+
+### Nonlinear contributions of the SCGLE equations
 function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, tol)
     ζᵢ = ζ₁ = ζ[1]
     ζ[i] = init_guess(ζ, i)
@@ -206,9 +171,6 @@ init_guess(ζ, i) = ζ[i - 1]
 
 view_firststep(F, i) = nothing
 view_firststep(F::Array{<:Projections.AbstractProjections}, i) = view(F, i, :)
-
-isnonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
-isnonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
 
 compute_nlmemory(Λ, ζᵢ, ζ₁, B, Bˢ, Δτ, j) = (Λ[j] * ζᵢ, nothing, nothing)
 #
