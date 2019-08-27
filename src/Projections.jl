@@ -120,7 +120,6 @@ Base.:*(x::Number, v::TR) = TR(x * v.t, x * v.r)
 Base.:*(v::TR, x::Number) = x * v
 Base.:*(u::TR, v::TR) = TR(u.t * v.t, u.r * v.r)
 #
-Base.:*(v::TR{<:Number}, p::DProjections) = DProjections(v.t * p.t, v.r * p.r)
 Base.:*(v::TR, p::MDProjections{2}) = @inbounds TR(v.t * (p.t + p.r[1]), v.r * p.r[2])
 Base.:*(p::AbstractProjections, v::TR) = v * p
 
