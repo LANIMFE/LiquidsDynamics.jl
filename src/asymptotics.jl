@@ -24,7 +24,7 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
     ζ∞ = ζ′
     ζ′ = 2ζ′
 
-    @inbounds while is_nonconvergent(ζ′, ζ∞, tol)
+    @inbounds while isnonconvergent(ζ′, ζ∞, tol)
         γ = D₀ * inv(ζ∞)
         ζ′ = ζ∞
 
@@ -46,7 +46,7 @@ function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rto
         return D.b = zero(D.b)
     end
 
-    while is_nonconvergent(D′, D.b, rtol)
+    while isnonconvergent(D′, D.b, rtol)
         Δτ *= 2
         D′ = D.b
         decimate!(dvars)

@@ -188,7 +188,7 @@ function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ,
     F₁ = view_firststep(F, 1)
     Fˢ₁ = view_firststep(Fˢ, 1)
 
-    @inbounds while is_nonconvergent(ζᵢ, ζ[i], tol)
+    @inbounds while isnonconvergent(ζᵢ, ζ[i], tol)
         ζᵢ = ζ[i]
 
         for j in eachindex(Λ)
@@ -207,8 +207,8 @@ init_guess(ζ, i) = ζ[i - 1]
 view_firststep(F, i) = nothing
 view_firststep(F::Array{<:Projections.AbstractProjections}, i) = view(F, i, :)
 
-is_nonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
-is_nonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
+isnonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
+isnonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
 
 compute_nlmemory(Λ, ζᵢ, ζ₁, B, Bˢ, Δτ, j) = (Λ[j] * ζᵢ, nothing, nothing)
 #
