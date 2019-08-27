@@ -9,8 +9,8 @@ using LinearAlgebra
 
 ### Exports
 export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
-       checksizes, getr, gett, getsvecornum, isanyless, llist, lptype, product,
-       project, reduce_dof
+       checksizes, getr, gett, getsvecornum, isanyless, isanyzero, llist,
+       lptype, product, project, reduce_dof
 
 
 ### Implemetation
@@ -232,6 +232,9 @@ Base.one(v::TR) = TR(one(v.t), one(v.r))
 Base.one(::Type{LDProjections{0, T}}) where {T} = LDProjections(one(T))
 Base.one(::Type{LDProjections{L, T}}) where {L, T} = LDProjections(one(T), ones(SVector{L, T}))
 Base.one(p::AbstractProjections) = constructorname(p)(one(p.t), ones(p.r))
+
+isanyzero(v) = iszero(v)
+isanyzero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
 
 isanyless(v, x) = v < x
 isanyless(v::TR{<:Number}, x) = v.t < x || v.r < x

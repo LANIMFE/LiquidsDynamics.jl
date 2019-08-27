@@ -42,7 +42,7 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
 end
 
 function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
-    if !iszero(ζ∞)
+    if !any_iszero(ζ∞)
         return D.b = zero(D.b)
     end
 
