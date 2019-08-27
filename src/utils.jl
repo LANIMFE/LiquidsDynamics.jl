@@ -1,3 +1,7 @@
+abstract type SCGLE end
+abstract type Dynamics    <: SCGLE end
+abstract type Asymptotics <: SCGLE end
+
 """    Ones{T}
 
 Indexable object that returns `one(T)` when indexed.
@@ -42,28 +46,37 @@ bsfactors(D₀::TR, K, S::Vector{T}) where {T} = TvR(D₀.t .* K.^2, D₀.r * ll
 
 bfactors(Bˢ, S) = Bˢ .* inv.(S)
 
-function weights(K, S, d, grid)
+function weights(E, K, S, d, grid)
+    w = alloc_weights(K, S)
     ws = ApproximationGrids.weights(grid)
-    return ws .* K.^(d + 1) .* (1 .- inv.(S)).^2
+    return weights!(E, w, ws, K, S, d, grid)
 end
 
-function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{0, T}}
-    w = fill(MDProjections(zero(T)), length(K))
-    ws = ApproximationGrids.weights(grid)
+alloc_weights(K, S) = fill(zero(eltype(S)), length(K))
+alloc_weights(K, S::Vector{U}) where {T, U <: DProjections{2, T}} =
+    fill(zero(MDProjections{2, T}), length(K))
 
-    for i in eachindex(K)
+weights!(::Type{Dynamics}, w, ws, K, S, d, grid) = dynamics_weights!(w, ws, K, S, d, grid)
+weights!(::Type{Asymptotics}, w, ws, K, S, d, grid) = asymptotics_weights!(w, ws, K, S, d, grid)
+
+function dynamics_weights!(w, ws, K, S, d, grid)
+    w .= ws .* K.^(d + 1) .* (1 .- inv.(S)).^2
+    return w
+end
+#
+function dynamics_weights!(w::Vector{U}, ws, K, S, d, grid) where {T, U <: DProjections{0, T}}
+
+    @inbounds for i in eachindex(K)
         t = ws[i] * K[i]^4 * (1 - inv(S[i].t))^2
         w[i] = MDProjections(t)
     end
 
     return w
 end
+#
+function dynamics_weights!(w::Vector{U}, ws, K, S, d, grid) where {U <: MDProjections{2}}
 
-function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{2, T}}
-    w = fill(MDProjections(zero(T), zero(SVector{2, T})), length(K))
-    ws = ApproximationGrids.weights(grid)
-
-    for i in eachindex(K)
+    @inbounds for i in eachindex(K)
         Sᵢ = S[i]
         k² = K[i]^2
         wᵣ = ws[i] * k²
@@ -80,15 +93,9 @@ function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{2, T}}
     return w
 end
 
-#function weights(K, S::Vector{U}, d, grid) where {N, T, U <: DProjections{N, T}}
-#    V = Projections.mptype(U) # SVector{M, T}
-#    z = zero(V)
-#    l = length(z)
-#    v = MVector(z)
-#    w = fill(MDProjections(zero(T), z), length(K))
-#    ws = weights(grid)
+#function dynamics_weights!(w::Vector{U}, ws, K, S, d, grid) where {U <: MDProjections}
 #
-#    for i in eachindex(K)
+#    @inbounds for i in eachindex(K)
 #        Sᵢ = S[i]
 #        k² = K[i]^2
 #        wᵣ = ws[i] * k²

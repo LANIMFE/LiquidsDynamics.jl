@@ -87,7 +87,7 @@ function initialize_dynamics(structure, n)
     Bˢ = bsfactors(D₀, K, S)
     B  = bfactors(Bˢ, S)
     d  = dimensionality(liquid)
-    w  = weights(K, S, d, grid)
+    w  = weights(Dynamics, K, S, d, grid)
     υ  = weight(D₀, liquid.η, d, grid)
     Λ  = lambdaof(liquid).(K)
 

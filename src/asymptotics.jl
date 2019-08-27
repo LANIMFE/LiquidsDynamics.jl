@@ -42,7 +42,7 @@ function asymptotics!(avars, kvars, Z, S, D₀, ζ′, tol)
 end
 
 function asymptotic_D!(D, D′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
-    if !any_iszero(ζ∞)
+    if !isanyzero(ζ∞)
         return D.b = zero(D.b)
     end
 
@@ -69,7 +69,7 @@ function initialize_asymptotics(structure)
     S  = project.(f.(K))
     Sˢ = onesof(S)
     d  = dimensionality(liquid)
-    w  = asymptotics_weights(K, S, d, grid)
+    w  = weights(Asymptotics, K, S, d, grid)
     υ  = weight(one(D₀), liquid.η, d, grid)
     Λ  = lambdaof(liquid).(K)
     B  = K.^2 ./ gett.(Λ)
@@ -88,16 +88,13 @@ function initialize_asymptotics(structure)
     return avars, kvars, D₀
 end
 
-function asymptotics_weights(K, S, d, grid)
-    ws = ApproximationGrids.weights(grid)
-    return ws .* K.^(d + 1) .* (S .- 1).^2 .* inv.(S)
+function asymptotics_weights!(w, ws, K, S, d, grid)
+    w .= ws .* K.^(d + 1) .* (S .- 1).^2 .* inv.(S)
+    return w
 end
 #
-function asymptotics_weights(K, S::Vector{U}, d, grid) where
-    {T, U <: DProjections{2, T}}
-
-    w = fill(MDProjections(zero(T), zero(SVector{2, T})), length(K))
-    ws = ApproximationGrids.weights(grid)
+function asymptotics_weights!(w::Vector{U}, ws, K, S, d, grid) where
+    {T, U <: MDProjections{2, T}}
 
     @inbounds for i in eachindex(K)
         Sᵢ = S[i]
