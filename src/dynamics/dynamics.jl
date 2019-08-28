@@ -1,4 +1,4 @@
-"""    dynamics(S, k; Δτ = 1e-7, t = 1e7, n = 128, rtol = sqrt(eps()), atol = 0.0)
+"""    dynamics(S, k; Δτ = 1e-7, t = 1e7, n = 128, rtol = sqrt(eps()), atol = eps())
 
 Computes the dynamical properties of a liquid `S` with structure factor
 approximated over a finite grid.  In particular it computes the intermediate
@@ -16,10 +16,10 @@ and the convergence of the relative tolerance for the memory function `ζ`,
 respectively.
 
 This function also returns the long-time-limit mobility `b` of the system up to
-an absolute precision specified by `atol`. By default this value is set to zero
+a relative tolerance specified by `atol`. By default this value is set to zero
 so the algorithm will end until `b` fully converges.
 """
-function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = 0.0)
+function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = eps())
     # Number of time points for which the short-times approximation is used.
     @assert n ≥ (n₀ = 8)
     # Dynamical variables, memory kernel variables and auxiliar variables.
@@ -58,8 +58,8 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
     # Reaching the time `t` won't generally guarantee that the asymptotic value
     # for the mobility `b` has converged.  If the asymptotic value of the
     # memory kernel is finite and greater than zero, we know that `b` should
-    # the be zero, so we use this fact.  Otherwise, we keep iterating until the
-    # convergence of `b` up to absolute precision `atol`, but no longer store
+    # the be zero, so we use this fact.  Otherwise, we keep iterating until
+    # convergence of `b` up to relative precision `atol`, but no longer store
     # the solutions to the SCGLE.
     avars, akvars, D₀ = initialize_asymptotics(S)
     A = asymptotics!(avars, akvars, auxvars.Z, S, D₀, last(dvars.ζ), rtol)

@@ -44,15 +44,12 @@ function asymptotic_mobility!(b, b′, ζ∞, dvars, kvars, auxvars, Δτ, n₀,
         return b.x = zero(b.x)
     end
 
-    while isnonconvergent(b′.x, b.x, rtol)
+    while isnonconvergent(b′.x, b.x, atol)
         Δτ *= 2
         b′ = b
         decimate!(dvars)
         solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
         b.x = b.x + integrate(Δτ, view(dvars.ζ, n₀:n))
-        if isanyless(inv(b.x), atol)
-            break
-        end
     end
 
     return b.x = inv(b.x)
