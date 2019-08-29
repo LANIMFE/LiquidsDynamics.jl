@@ -10,10 +10,10 @@ function asymptotics(S; rtol = sqrt(eps()))
     avars, kvars, D₀ = initialize_asymptotics(S)
     Z = similar(kvars.svars.w)
 
-    return asymptotics!(avars, kvars, Z, S, D₀, avars.ζ∞.x, rtol)
+    return asymptotics!(avars, kvars, Z, D₀, avars.ζ∞.x, rtol)
 end
 
-function asymptotics!(avars, kvars, Z, S, D₀, ζ′, rtol)
+function asymptotics!(avars, kvars, Z, D₀, ζ′, rtol)
     @unpack f, fˢ = avars
     @unpack svars, Λ = kvars
     @unpack S, Sˢ, B, w, υ = svars
