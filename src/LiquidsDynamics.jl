@@ -12,31 +12,39 @@ using Reexport
 using Parameters
 using LinearAlgebra: I
 
-using .Projections
+@reexport using .Projections
 @reexport using .LiquidsStructureGrids
 
 
 ### Exports
-export asymptotics, dynamics, dynamics!, initialize_dynamics
+export asymptotics, asymptotics!, dynamics, dynamics!, initialize_asymptotics,
+       initialize_dynamics
 
 
 ### Implementation
+abstract type SCGLE end
+abstract type Dynamics    <: SCGLE end
+abstract type Asymptotics <: SCGLE end
+
 include("utils.jl")
-include("initialization.jl")
-include("globaldynamics.jl")
-include("shorttimes.jl")
-include("intermediatetimes.jl")
-include("asymptotics.jl")
+include("dynamics/dynamics.jl")
+include("dynamics/init.jl")
+include("dynamics/shorttimes.jl")
+include("dynamics/intermediatetimes.jl")
+include("dynamics/utils.jl")
+include("asymptotics/asymptotics.jl")
+include("asymptotics/init.jl")
+include("asymptotics/utils.jl")
 
 
 function __init__()
     # Hack to work around some performance issues in base (#32552, #28683)
     # Run a method and eval a part of the function that uses dynamic dispatch
 
-    structure = StructureFactor(DipolarHardSpheres(0.3, 0.05), MSA{VerletWeis})
+    structure = StructureFactor(DipolarHardSpheres(0.3, 1.0), MSA{VerletWeis})
     grid = ChebyshevGrid(0, 50, 2^9)
     S = StructureFactorGrid(structure, grid)
-    dynamics(S, 7.2, 1e6, n = 16)
+    dynamics(S, 7.2, n = 16)
 
     @eval begin
         Projections.:*(v::TR, p::MDProjections{2}) =

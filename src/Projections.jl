@@ -7,6 +7,12 @@ using LinearAlgebra
 @reexport using StaticArrays
 
 
+### Exports
+export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
+       checksizes, getr, gett, getsvecornum, isanyless, isanyzero, llist,
+       lptype, product, project, reduce_dof
+
+
 ### Implemetation
 
 # Structs
@@ -60,6 +66,8 @@ end
 DProjections(t::Number ) = DProjections(t, SVector{0, typeof(t)}())
 LDProjections(t::Number) = LDProjections(t, SVector{0, typeof(t)}())
 MDProjections(t::Number) = MDProjections(t, SVector{0, typeof(t)}())
+
+LDProjections(v::TRv) = LDProjections(v.t, v.r)
 
 constructorname(::Type{P}) where {P <: DProjections } = DProjections
 constructorname(::Type{P}) where {P <: LDProjections} = LDProjections
@@ -162,7 +170,9 @@ end
 Base.:*(p::DProjections, q::LDProjections) = q * p
 
 product(x, y, z) = x * y * z
-product(p::MDProjections{0}, q::DProjections{0}, r::LDProjections{0}) = MDProjections(p.t * q.t * r.t)    
+product(p::MDProjections{0}, q::DProjections{0}, r::LDProjections{0}) =
+    MDProjections(p.t * q.t * r.t)
+#
 function product(p::MDProjections{2}, q::DProjections{2}, r::LDProjections{1})
     t = p.t * q.t * r.t
     @inbounds begin
@@ -171,6 +181,7 @@ function product(p::MDProjections{2}, q::DProjections{2}, r::LDProjections{1})
     end
     return MDProjections(t, SVector(r₁, r₂))
 end
+#
 function product(p::MDProjections{M}, q::DProjections{N}, r::LDProjections{L}) where {M, N, L}
     checksizes(typeof(p), typeof(q))
     checksizes(typeof(q), typeof(r))
@@ -200,10 +211,13 @@ Base.:+(v::TR, p::DProjections)     = DProjections(v.t + p.t, v.r .+ p.r)
 Base.:+(v::TR, p::LDProjections{0}) = LDProjections(v.t + p.t)
 Base.:+(v::TR, p::LDProjections)    = LDProjections(v.t + p.t, v.r .+ p.r)
 
+Base.:-(J::UniformScaling, v::TR) = TR(J.λ - v.t, J.λ - v.r)
+
 Base.:^(v::TR, n::Integer) = TR(v.t^n, v.r^n)
 Base.inv(v::TR) = TR(inv(v.t), inv(v.r))
 
-Base.zero(v::TR) = TR(zero(v.t), zero(v.r))
+Base.zero(::Type{TR{T}}) where {T} = (o = zero(T); TR(o, o))
+Base.zero(v::TR{T}) where {T} = (o = zero(T); TR(o, o))
 
 Base.zero(::Type{ DProjections{0, T}}) where {T} = DProjections(zero(T))
 Base.zero(::Type{LDProjections{0, T}}) where {T} = LDProjections(zero(T))
@@ -217,6 +231,12 @@ Base.one(v::TR) = TR(one(v.t), one(v.r))
 Base.one(::Type{LDProjections{0, T}}) where {T} = LDProjections(one(T))
 Base.one(::Type{LDProjections{L, T}}) where {L, T} = LDProjections(one(T), ones(SVector{L, T}))
 Base.one(p::AbstractProjections) = constructorname(p)(one(p.t), ones(p.r))
+
+isanyzero(v) = iszero(v)
+isanyzero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
+
+isanyless(v, x) = v < x
+isanyless(v::TR{<:Number}, x) = v.t < x || v.r < x
 
 Base.muladd(x::Number, p::DProjections{0}, q::DProjections{0}) = DProjections(muladd(x, p.t, q.t))
 function Base.muladd(x::Number, p::DProjections{2}, q::DProjections{2})
@@ -267,12 +287,6 @@ llist(::Type{DProjections{2, T}}) where {T} = SVector(T(2))
 #end
 #llist(::T) where {T <: DProjections} = llist(T)
 #llist(x) = zero(x)
-
-
-### Exports
-export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
-       checksizes, getr, gett, getsvecornum, llist, lptype, product, project,
-       reduce_dof
 
 
 end # module

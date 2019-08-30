@@ -1,3 +1,4 @@
+### Lazy objects that act as vectors of ones
 """    Ones{T}
 
 Indexable object that returns `one(T)` when indexed.
@@ -16,10 +17,25 @@ Base.checkbounds(::Ones, I...) = nothing
 
 Base.show(io::IO, ::MIME"text/plain", A::Ones) = print(io, typeof(A), "()")
 
+
+mutable struct Mutable{T}
+    x::T
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::Mutable)
+    if get(io, :compact, false)
+        print(io, "Mutable")
+    end
+    print(io, "(", m.x, ")")
+end
+
+Base.one(m::Mutable) = Mutable(m.x)
+
+
 ### Interpolation function for the SCGLE theory
 struct Lambda{T}
     kᶜ::T
-    
+
     Lambda{T}(k::T) where {T} = new(k)
 end
 
@@ -31,85 +47,39 @@ lambdaof(::DipolarHardSpheres) = Lambda(TR(1.305, Inf))
 
 (λ::Lambda)(k) = inv(I + (k * inv(λ.kᶜ))^2)
 
+
+### Diffusion coefficents
 diffusion_coeff(::HardDisks) = 1
 diffusion_coeff(::HardSpheres) = 1
 diffusion_coeff(::DipolarHardSpheres) = TR(1, 1)
 
+
+### Static auxiliar quantities
 bsfactors(D₀, K, S) = D₀ .* K.^2
 bsfactors(D₀::TR, K, S::Vector{T}) where {T} = TvR(D₀.t .* K.^2, D₀.r * llist(T))
 
 bfactors(Bˢ, S) = Bˢ .* inv.(S)
 
-function weights(K, S, d, grid)
+function weights(E, K, S, d, grid)
+    w = alloc_weights(K, S)
     ws = ApproximationGrids.weights(grid)
-    return ws .* K.^(d + 1) .* (1 .- inv.(S)).^2
+    return weights!(E, w, ws, K, S, d, grid)
 end
 
-function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{0, T}}
-    w = fill(MDProjections(zero(T)), length(K))
-    ws = ApproximationGrids.weights(grid)
-    
-    for i in eachindex(K)
-        t = ws[i] * K[i]^4 * (1 - inv(S[i].t))^2
-        w[i] = MDProjections(t)
-    end    
-    
-    return w
-end
+alloc_weights(K, S) = fill(zero(eltype(S)), length(K))
+alloc_weights(K, S::Vector{U}) where {T, U <: DProjections{2, T}} =
+    fill(zero(MDProjections{2, T}), length(K))
 
-function weights(K, S::Vector{U}, d, grid) where {T, U <: DProjections{2, T}}
-    w = fill(MDProjections(zero(T), zero(SVector{2, T})), length(K))
-    ws = ApproximationGrids.weights(grid)
-    
-    for i in eachindex(K)
-        Sᵢ = S[i]
-        k² = K[i]^2
-        wᵣ = ws[i] * k²
-        wₜ = wᵣ * k²
-        
-        # Projections components of the weights
-        t  = wₜ * (1 - inv(Sᵢ.t))^2
-        r₀ = 3wₜ * (1 - inv(Sᵢ.r[1]))^2
-        r₁ = 6wᵣ * ((Sᵢ.r[1] - 1) * inv(Sᵢ.r[2]))^2
-        
-        w[i] = MDProjections(t, SVector(r₀, r₁))
-    end
-    
-    return w
-end
-
-#function weights(K, S::Vector{U}, d, grid) where {N, T, U <: DProjections{N, T}}
-#    V = Projections.mptype(U) # SVector{M, T}
-#    z = zero(V)
-#    l = length(z)
-#    v = MVector(z)
-#    w = fill(MDProjections(zero(T), z), length(K))
-#    ws = weights(grid)
-#
-#    for i in eachindex(K)
-#        Sᵢ = S[i]
-#        k² = K[i]^2
-#        wᵣ = ws[i] * k²
-#
-#        # Projections components of the weights
-#        t = wᵣ * k² * (1 - inv(Sᵢ.t))^2
-#        for j = 1:l
-#            α = wᵣ * (2j + 1)
-#            v[j] = α * k² * (1 - inv(Sᵢ.r[j]))^2
-#            v[j] = α * j * (j + 1) * ((Sᵢ.r[j] - 1) * inv(Sᵢ.r[j + l]))^2
-#        end
-#
-#        w[i] = MDProjections(t, SVector(v))
-#    end
-#
-#    return w
-#end
+weights!(::Type{Dynamics}, w, ws, K, S, d, grid) =
+    dynamics_weights!(w, ws, K, S, d, grid)
+weights!(::Type{Asymptotics}, w, ws, K, S, d, grid) =
+    asymptotics_weights!(w, ws, K, S, d, grid)
 
 function weight(D₀, η, d, grid)
     j = jacobian(grid) / (4d * π^(d - 2) * η)
     return D₀ * j / d
 end
-
+#
 function weight(D₀::TR, η, d, approx)
     j = jacobian(approx) / (12π * η)
     return TR(D₀.t * j / 3, D₀.r * j / 4)
@@ -117,3 +87,48 @@ end
 
 init_conv(ζ) = nothing
 init_conv(ζ::Vector{TR{T}}) where {T} = zeros(T, length(ζ))
+
+
+### Other utils
+function decimate!(V::Vector)
+    m = length(V)
+    @inbounds for i = 2:2:m
+        V[div(i, 2)] = (V[i - 1] + V[i]) / 2
+    end
+    return V
+end
+
+function decimate!(M::Matrix)
+    m = size(M, 1)
+    for i = 2:2:m
+        @views M[div(i, 2), :] .= (M[i, :] .+ M[i - 1, :]) ./ 2
+    end
+    return M
+end
+
+isnonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
+isnonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
+
+diff!(Δζ, ζ, i) = (Δζ[i] = ζ[i - 1] - ζ[i])
+
+conv!(ζoζ::Nothing, ζ, n) = nothing
+function conv!(ζoζ::Vector{T}, ζ, n) where {T}
+    nₕ = n ÷ 2
+    ζoζn = zero(T)
+    for i = 1:nₕ
+        ζoζn += (ζ[i].t * ζ[n - i + 1].r) + (ζ[i].r * ζ[n - i + 1].t)
+    end
+    if isodd(n)
+        ζoζn += ζ[nₕ + 1].t * ζ[nₕ + 1].r
+    end
+    return ζoζ[n] = ζoζn
+end
+
+# TODO: Try with Simpson's rule instead of trapezoid rule
+function integrate(h, v)
+    n = length(v)
+    @inbounds begin
+        Σ = sum(v[i] for i = 2:n) + (v[1] + v[end]) / 2
+    end
+    return h * Σ
+end

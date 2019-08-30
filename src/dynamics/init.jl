@@ -30,16 +30,16 @@ struct DynamicsAuxVars{T, U, V, W, X}
     ζoζ ::X
 end
 
-struct DynamicalProperties{T}
-    #D ::Vector{T} # diffusion coefficient
-    #W ::Vector{T} # mean square displacement
-    Dₗ::Ref{T}    # long-time diffusion coefficient limit
-end
+#struct DynamicalProperties{T}
+#    D ::Vector{T} # diffusion coefficient
+#    W ::Vector{T} # mean square displacement
+#end
 
-struct DynamicsOutput{T, U <: DynamicsVars}
-    τ::T
-    dvars::U
-    n::Int # number of time-grid points per decade
+struct DynamicsOutput{T, U <: DynamicsVars, V}
+    n::Int         # number of time-grid points per decade
+    τ::T           # time grid
+    dvars::U       # dynamics variables
+    b::Mutable{V} # asymptotic mobility
 end
 
 function DynamicsOutput(vars, grid, k, Δτ, n)
@@ -47,25 +47,26 @@ function DynamicsOutput(vars, grid, k, Δτ, n)
     F  = collect(interpolate(grid, vars.F[i, :], k) for i = 1:n)
     Fˢ = collect(interpolate(grid, vars.Fˢ[i, :], k) for i = 1:n)
     ζ  = copy(vars.ζ)
-    #Dₗ = Ref(inv(1 + Δτ * sum(Δζ)))
 
     dvars = DynamicsVars(F, Fˢ, ζ)
-    #oprops = OtherDynamicalProperties(#=D, W, =#Dₗ)
+    x = I + integrate(Δτ, ζ)
+    b = Mutable(x)
 
-    return DynamicsOutput{typeof(τ), typeof(dvars)}(τ, dvars, n)
+    return DynamicsOutput{typeof(τ), typeof(dvars), typeof(x)}(n, τ, dvars, b)
 end
 
 function update!(output, vars, grid, k, Δτ, n₀, n)
-    @unpack τ, dvars = output
+    @unpack τ, dvars, b = output
     @unpack F, Fˢ, ζ = dvars
 
-    ζₙ = view(vars.ζ, n₀:n)
-
+    # TODO: Instead of interpolating, use the memory kernel `ζ` already
+    #       calculated.
     append!(τ, Δτ * (n₀:n))
     append!(F, (interpolate(grid, vars.F[i, :], k) for i = n₀:n))
     append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
-    append!(ζ, ζₙ)
-    #oprops.Dₗ[] = inv(inv(oprops.Dₗ[]) + Δτ * sum(Δζₙ))
+    append!(ζ, view(vars.ζ, n₀:n))
+
+    b.x = b.x + integrate(Δτ, view(vars.ζ, (n₀ - 1):n))
 
     return output
 end
@@ -83,7 +84,7 @@ function initialize_dynamics(structure, n)
     Bˢ = bsfactors(D₀, K, S)
     B  = bfactors(Bˢ, S)
     d  = dimensionality(liquid)
-    w  = weights(K, S, d, grid)
+    w  = weights(Dynamics, K, S, d, grid)
     υ  = weight(D₀, liquid.η, d, grid)
     Λ  = lambdaof(liquid).(K)
 
@@ -96,7 +97,7 @@ function initialize_dynamics(structure, n)
     Fˢ = zeros(eltype(Sˢ), n, m)
     F  = zeros(eltype(S), n, m)
     ζ  = fill(zero(υ), n)
-    #D   = copy(ζ)
+    #D  = copy(ζ)
 
     dvars = DynamicsVars(F, Fˢ, ζ)
 
