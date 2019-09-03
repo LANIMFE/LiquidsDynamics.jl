@@ -1,4 +1,4 @@
-function solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
+function solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
     @unpack F, Fˢ, ζ = dvars
     @unpack svars, Λ = kvars
     @unpack S, Sˢ, B, Bˢ, w, υ = svars
@@ -9,7 +9,7 @@ function solve!(dvars, kvars, auxvars, Δτ, n₀, n, tol)
 
     for i = n₀:n
         perform_linstep!(Fᵢ, Fˢᵢ, F, Fˢ, ΔF₁, ΔFˢ₁, B, Bˢ, ζ, Δζ, ζoζ, Λ, Δτ, i)
-        perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, tol)
+        perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, rtol)
         diff!(Δζ, ζ, i)
         conv!(ζoζ, ζ, i)
     end
@@ -146,14 +146,14 @@ end
 
 
 ### Nonlinear contributions of the SCGLE equations
-function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, tol)
-    ζᵢ = ζ₁ = ζ[1]
+function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ, Z, ζ, Λ, w, υ, Δτ, i, rtol)
+    ζ₁ = ζ[1]
     ζ[i] = init_guess(ζ, i)
 
     F₁ = view_firststep(F, 1)
     Fˢ₁ = view_firststep(Fˢ, 1)
 
-    @inbounds while isnonconvergent(ζᵢ, ζ[i], tol)
+    @inbounds while true
         ζᵢ = ζ[i]
 
         for j in eachindex(Λ)
@@ -164,6 +164,10 @@ function perform_nlstep!(F, Fˢ, Fᵢ, Fˢᵢ, ΔF₁, ΔFˢ₁, A, Aˢ, B, Bˢ,
         end
 
         ζ[i] = υ * sum(Z)
+
+        if isapprox(ζᵢ, ζ[i]; rtol = rtol, nans = true)
+            break
+        end
     end
 end
 

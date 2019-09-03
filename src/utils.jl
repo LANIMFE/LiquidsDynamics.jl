@@ -106,22 +106,19 @@ function decimate!(M::Matrix)
     return M
 end
 
-isnonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
-isnonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
+diff!(ΔV, V, i) = (ΔV[i] = V[i - 1] - V[i])
 
-diff!(Δζ, ζ, i) = (Δζ[i] = ζ[i - 1] - ζ[i])
-
-conv!(ζoζ::Nothing, ζ, n) = nothing
-function conv!(ζoζ::Vector{T}, ζ, n) where {T}
+conv!(VoV::Nothing, V, n) = nothing
+function conv!(VoV::Vector{T}, V, n) where {T}
     nₕ = n ÷ 2
-    ζoζn = zero(T)
+    VoVn = zero(T)
     for i = 1:nₕ
-        ζoζn += (ζ[i].t * ζ[n - i + 1].r) + (ζ[i].r * ζ[n - i + 1].t)
+        VoVn += (V[i].t * V[n - i + 1].r) + (V[i].r * V[n - i + 1].t)
     end
     if isodd(n)
-        ζoζn += ζ[nₕ + 1].t * ζ[nₕ + 1].r
+        VoVn += V[nₕ + 1].t * V[nₕ + 1].r
     end
-    return ζoζ[n] = ζoζn
+    return VoV[n] = VoVn
 end
 
 # TODO: Try with Simpson's rule instead of trapezoid rule
