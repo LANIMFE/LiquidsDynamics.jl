@@ -1,5 +1,7 @@
 function asymptotics_weights!(w, ws, K, S, d, grid)
-    w .= ws .* K.^(d + 1) .* (S .- 1).^2 .* inv.(S)
+    # We write `(1 .- inv.(S)).^2 .* S` instead of `(S .- 1).^2 .* inv.(S)`
+    # to get `w[j] == Inf` instead of `NaN` whenever `S[j] == Inf`.
+    w .= ws .* K.^(d + 1) .* (1 .- inv.(S)).^2 .* S
     return w
 end
 #
@@ -13,7 +15,7 @@ function asymptotics_weights!(w::Vector{U}, ws, K, S, d, grid) where
         wₜ = wᵣ * k²
 
         # Projections components of the weights
-        t  = wₜ * (Sᵢ.t - 1)^2 * inv(Sᵢ.t)
+        t  = wₜ * (1 - inv(Sᵢ.t))^2 * Sᵢ.t
         r₀ = (Sᵢ.r[1] - 1)^2
         r₁ = 3wₜ * r₀ * inv(Sᵢ.r[1])
         r₂ = 6wᵣ * r₀ * inv(Sᵢ.r[2])
