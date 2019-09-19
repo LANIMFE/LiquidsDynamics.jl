@@ -25,7 +25,7 @@ function initialize_asymptotics(structure)
     m  = length(S)
     fˢ = zeros(eltype(Sˢ), m)
     f  = zeros(eltype(S), m)
-    ζ∞ = Mutable(υ * sum(w))
+    ζ∞ = Box(υ * sum(w))
 
     avars = AsymptoticVars(f, fˢ, ζ∞)
 

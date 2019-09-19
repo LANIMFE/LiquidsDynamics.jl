@@ -238,6 +238,12 @@ isanyzero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
 isanyless(v, x) = v < x
 isanyless(v::TR{<:Number}, x) = v.t < x || v.r < x
 
+function Base.isapprox(u::TR{T}, v::TR{T}; atol::Real = 0, rtol::Real = Base.rtoldefault(T),
+                       nans::Bool = false) where {T <: Number}
+    return isapprox(u.t, v.t; atol = atol, rtol = rtol, nans = nans) &&
+           isapprox(u.r, v.r; atol = atol, rtol = rtol, nans = nans)
+end
+
 Base.muladd(x::Number, p::DProjections{0}, q::DProjections{0}) = DProjections(muladd(x, p.t, q.t))
 function Base.muladd(x::Number, p::DProjections{2}, q::DProjections{2})
     t = muladd(x, p.t, q.t)

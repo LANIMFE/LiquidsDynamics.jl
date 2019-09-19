@@ -17,19 +17,27 @@ Base.checkbounds(::Ones, I...) = nothing
 
 Base.show(io::IO, ::MIME"text/plain", A::Ones) = print(io, typeof(A), "()")
 
-
-mutable struct Mutable{T}
+# Similar to `Ref` from base, but with some useful extras
+mutable struct Box{T}
     x::T
+
+    Box{T}() where {T} = new()
+    Box{T}(x) where {T} = new(x)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", m::Mutable)
+Box(x::T) where {T} = Box{T}(x)
+
+Base.getindex(b::Box) = b.x
+Base.setindex!(b::Box, x) = (b.x = x; b)
+
+function Base.show(io::IO, ::MIME"text/plain", b::Box)
     if get(io, :compact, false)
-        print(io, "Mutable")
+        print(io, "Box")
     end
-    print(io, "(", m.x, ")")
+    print(io, "(", b.x, ")")
 end
 
-Base.one(m::Mutable) = Mutable(m.x)
+Base.one(b::Box) = Box(one(b.x))
 
 
 ### Interpolation function for the SCGLE theory
@@ -106,29 +114,33 @@ function decimate!(M::Matrix)
     return M
 end
 
-isnonconvergent(ζᵢ, ζ, tol) = abs(1 - ζᵢ / ζ) > tol
-isnonconvergent(ζᵢ::TR, ζ, tol) = (abs(1 - ζᵢ.t / ζ.t) > tol || abs(1 - ζᵢ.r / ζ.r) > tol)
+diff!(ΔV, V, i) = (ΔV[i] = V[i - 1] - V[i])
 
-diff!(Δζ, ζ, i) = (Δζ[i] = ζ[i - 1] - ζ[i])
-
-conv!(ζoζ::Nothing, ζ, n) = nothing
-function conv!(ζoζ::Vector{T}, ζ, n) where {T}
+conv!(VoV::Nothing, V, n) = nothing
+function conv!(VoV::Vector{T}, V, n) where {T}
     nₕ = n ÷ 2
-    ζoζn = zero(T)
+    VoVn = zero(T)
     for i = 1:nₕ
-        ζoζn += (ζ[i].t * ζ[n - i + 1].r) + (ζ[i].r * ζ[n - i + 1].t)
+        VoVn += (V[i].t * V[n - i + 1].r) + (V[i].r * V[n - i + 1].t)
     end
     if isodd(n)
-        ζoζn += ζ[nₕ + 1].t * ζ[nₕ + 1].r
+        VoVn += V[nₕ + 1].t * V[nₕ + 1].r
     end
-    return ζoζ[n] = ζoζn
+    return VoV[n] = VoVn
 end
 
-# TODO: Try with Simpson's rule instead of trapezoid rule
-function integrate(h, v)
-    n = length(v)
+# Simpson integration. The lower endpoint can be optionally supplied through
+# the keyword argument `y₀`.
+function integrate(h, y::AbstractVector{T}; y₀::Union{T, Nothing} = nothing) where {T}
+    haskeyword = y₀ !== nothing
+    i₁ = Int(!haskeyword)
+    n = length(y)
     @inbounds begin
-        Σ = sum(v[i] for i = 2:n) + (v[1] + v[end]) / 2
+        y₁ = haskeyword ? y₀ : y[1]
+        I  = sum(y[i] for i = (i₁ + 3):(n - 3))
+        I += (23 // 24) * (y[i₁ + 2] + y[n - 2])
+        I += ( 7 // 6 ) * (y[i₁ + 1] + y[n - 1])
+        I += ( 3 // 8 ) * (y₁ + y[n])
     end
-    return h * Σ
+    return h * I
 end
