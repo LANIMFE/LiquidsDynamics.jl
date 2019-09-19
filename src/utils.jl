@@ -129,11 +129,18 @@ function conv!(VoV::Vector{T}, V, n) where {T}
     return VoV[n] = VoVn
 end
 
-# TODO: Try with Simpson's rule instead of trapezoid rule
-function integrate(h, v)
-    n = length(v)
+# Simpson integration. The lower endpoint can be optionally supplied through
+# the keyword argument `y₀`.
+function integrate(h, y::AbstractVector{T}; y₀::Union{T, Nothing} = nothing) where {T}
+    haskeyword = y₀ !== nothing
+    i₁ = Int(!haskeyword)
+    n = length(y)
     @inbounds begin
-        Σ = sum(v[i] for i = 2:n) + (v[1] + v[end]) / 2
+        y₁ = haskeyword ? y₀ : y[1]
+        I  = sum(y[i] for i = (i₁ + 3):(n - 3))
+        I += (23 // 24) * (y[i₁ + 2] + y[n - 2])
+        I += ( 7 // 6 ) * (y[i₁ + 1] + y[n - 1])
+        I += ( 3 // 8 ) * (y₁ + y[n])
     end
-    return h * Σ
+    return h * I
 end
