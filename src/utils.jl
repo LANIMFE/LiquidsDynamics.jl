@@ -17,19 +17,27 @@ Base.checkbounds(::Ones, I...) = nothing
 
 Base.show(io::IO, ::MIME"text/plain", A::Ones) = print(io, typeof(A), "()")
 
-
-mutable struct Mutable{T}
+# Similar to `Ref` from base, but with some useful extras
+mutable struct Box{T}
     x::T
+
+    Box{T}() where {T} = new()
+    Box{T}(x) where {T} = new(x)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", m::Mutable)
+Box(x::T) where {T} = Box{T}(x)
+
+Base.getindex(b::Box) = b.x
+Base.setindex!(b::Box, x) = (b.x = x; b)
+
+function Base.show(io::IO, ::MIME"text/plain", b::Box)
     if get(io, :compact, false)
-        print(io, "Mutable")
+        print(io, "Box")
     end
-    print(io, "(", m.x, ")")
+    print(io, "(", b.x, ")")
 end
 
-Base.one(m::Mutable) = Mutable(m.x)
+Base.one(b::Box) = Box(one(b.x))
 
 
 ### Interpolation function for the SCGLE theory

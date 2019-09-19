@@ -1,4 +1,4 @@
-"""    dynamics(S, k; Δτ = 1e-7, t = 1e7, n = 128, rtol = sqrt(eps()), atol = eps())
+"""    dynamics(S, k; Δτ = 1e-7, t = 1e7, n = 128, rtol = sqrt(eps()), brtol = eps())
 
 Computes the dynamical properties of a liquid `S` with structure factor
 approximated over a finite grid.  In particular it computes the intermediate
@@ -16,10 +16,9 @@ and the convergence of the relative tolerance for the memory function `ζ`,
 respectively.
 
 This function also returns the long-time-limit mobility `b` of the system up to
-a relative tolerance specified by `atol`. By default this value is set to zero
-so the algorithm will end until `b` fully converges.
+a relative tolerance specified by `brtol`.
 """
-function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol = eps())
+function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), brtol = eps())
     # Number of time points for which the short-times approximation is used.
     @assert n ≥ (n₀ = 8)
     # Dynamical variables, memory kernel variables and auxiliar variables.
@@ -27,10 +26,10 @@ function dynamics(S, k; t = 1e7, Δτ = 1e-7, n = 128, rtol = sqrt(eps()), atol 
 
     # The current function is just an initialization routine,
     # the real work starts here.
-    return dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
+    return dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, brtol)
 end
 
-function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
+function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, brtol)
     # Use a short-times approximation initially.
     approximate!(dvars, kvars.svars, auxvars.Z, Δτ, n₀)
     # Fill the first time grid employing the SCGGLE equations.
@@ -59,11 +58,12 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, atol)
     # for the mobility `b` has converged.  If the asymptotic value of the
     # memory kernel is finite and greater than zero, we know that `b` should
     # the be zero, so we use this fact.  Otherwise, we keep iterating until
-    # convergence of `b` up to relative precision `atol`, but no longer store
+    # convergence of `b` up to relative precision `brtol`, but no longer store
     # the solutions to the SCGLE.
     avars, akvars, D₀ = initialize_asymptotics(S)
     asymptotics!(avars, akvars, auxvars.Z, D₀, last(dvars.ζ), rtol)
-    asymptotic_mobility!(output.b, b′, avars.ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, atol)
+    asymptotic_mobility!(output.b, b′, avars.ζ∞, dvars, kvars, auxvars,
+                         Δτ, n₀, n, rtol, brtol)
 
     return output
 end

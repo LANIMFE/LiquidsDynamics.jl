@@ -36,10 +36,10 @@ end
 #end
 
 struct DynamicsOutput{T, U <: DynamicsVars, V}
-    n::Int         # number of time-grid points per decade
-    τ::T           # time grid
-    dvars::U       # dynamics variables
-    b::Mutable{V} # asymptotic mobility
+    n::Int    # number of time-grid points per decade
+    τ::T      # time grid
+    dvars::U  # dynamics variables
+    b::Box{V} # asymptotic mobility
 end
 
 function DynamicsOutput(vars, grid, k, Δτ, n)
@@ -50,7 +50,7 @@ function DynamicsOutput(vars, grid, k, Δτ, n)
 
     dvars = DynamicsVars(F, Fˢ, ζ)
     x = I + integrate(Δτ, ζ)
-    b = Mutable(x)
+    b = Box(x)
 
     return DynamicsOutput{typeof(τ), typeof(dvars), typeof(x)}(n, τ, dvars, b)
 end
@@ -66,7 +66,7 @@ function update!(output, vars, grid, k, Δτ, n₀, n)
     append!(Fˢ, (interpolate(grid, vars.Fˢ[i, :], k) for i = n₀:n))
     append!(ζ, view(vars.ζ, n₀:n))
 
-    b.x = b.x + integrate(Δτ, view(vars.ζ, (n₀ - 1):n))
+    b[] = b[] + integrate(Δτ, view(vars.ζ, (n₀ - 1):n))
 
     return output
 end

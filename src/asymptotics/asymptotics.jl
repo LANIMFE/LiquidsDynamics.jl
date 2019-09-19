@@ -10,7 +10,7 @@ function asymptotics(S; rtol = sqrt(eps()))
     avars, kvars, D₀ = initialize_asymptotics(S)
     Z = similar(kvars.svars.w)
 
-    return asymptotics!(avars, kvars, Z, D₀, avars.ζ∞.x, rtol)
+    return asymptotics!(avars, kvars, Z, D₀, avars.ζ∞[], rtol)
 end
 
 function asymptotics!(avars, kvars, Z, D₀, ζ∞, rtol)
@@ -36,7 +36,7 @@ function asymptotics!(avars, kvars, Z, D₀, ζ∞, rtol)
         end
     end
 
-    avars.ζ∞.x = ζ∞
+    avars.ζ∞[] = ζ∞
     return avars
 end
 
@@ -51,12 +51,12 @@ function asymptotic_mobility!(b, b′, ζ∞, dvars, kvars, auxvars, Δτ, n₀,
 
         decimate!(dvars)
         solve!(dvars, kvars, auxvars, Δτ, n₀, n, rtol)
-        b.x = b.x + integrate(Δτ, view(dvars.ζ, n₀:n))
+        b[] = b[] + integrate(Δτ, view(dvars.ζ, (n₀ - 1):n))
 
         if isapprox(b′[], b[]; rtol = brtol, nans = true)
             break
         end
     end
 
-    return b.x = inv(b.x)
+    return b[] = inv(b[])
 end
