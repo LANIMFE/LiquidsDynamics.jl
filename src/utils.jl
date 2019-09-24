@@ -50,14 +50,14 @@ end
 Lambda(α) = (kᶜ = 2π * α; Lambda{typeof(kᶜ)}(kᶜ))
 
 # Indirect constructors from LiquidsStructure.Liquid subtypes
-lambdaof(::Liquid) = Lambda(1.305)
+lambdaof(::LiquidsStructure.Liquid) = Lambda(1.305)
 lambdaof(::DipolarHardSpheres) = Lambda(TR(1.305, Inf))
 
 (λ::Lambda)(k) = inv(I + (k * inv(λ.kᶜ))^2)
 
 
 ### Diffusion coefficents
-diffusion_coeff(::Liquid) = 1
+diffusion_coeff(::LiquidsStructure.Liquid) = 1
 diffusion_coeff(::DipolarHardSpheres) = TR(1, 1)
 
 
