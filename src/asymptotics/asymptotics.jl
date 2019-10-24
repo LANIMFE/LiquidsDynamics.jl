@@ -9,18 +9,17 @@ function asymptotics(S; rtol = eps(), verbose = false)
     # Dynamical variables, memory kernel variables and auxiliar variables
     avars, kvars, D₀ = initialize_asymptotics(S)
     Z = similar(kvars.svars.w)
-
     g = ζ -> fixedpoint!(Z, kvars, D₀, ζ)
 
-    return asymptotics!(g, avars, avars.ζ∞[], rtol, verbose = verbose)
+    return asymptotics!(g, avars, avars.ζ∞[]; rtol = rtol, verbose = verbose)
 end
 
-function asymptotics!(g, avars, ζ∞, rtol; verbose = false)
+function asymptotics!(g, avars, ζ; rtol = rtol, verbose = false)
     # Initialize Anderson Acceleration (AA). We use only the previous point,
     # that is, we set `m = 1` in the AA algorithm.
     # TODO: Try AA with `m = 2`.
-    z₋ = ζ∞
-    z̃₋ = g(z₋)
+    z₋ = ζ
+    z̃₋ = g(ζ)
     f₋ = z₋ - z̃₋
     z = z̃₋
     z̃ = g(z)
@@ -31,7 +30,7 @@ function asymptotics!(g, avars, ζ∞, rtol; verbose = false)
     c = 0
     # AA step and reference value to check when the sequence regresses.
     Δz = Δz̃ = zero(z)
-    # A trust region is used to ensure positive-definitennes of the solution.
+    # A trust region is used to ensure positive-definiteness of the solution.
     trustregion = EllipsoidalRegion()
 
     while true
@@ -40,52 +39,39 @@ function asymptotics!(g, avars, ζ∞, rtol; verbose = false)
         end
 
         Δf = f - f₋
-        if iszero(Δf)
+        Δf² = Δf ⋅ Δf
+        if iszero(Δf²)
             Δz = zero(Δz)
         else
-            γ = (Δf ⋅ f) / (Δf ⋅ Δf)
-            Δz = bound(trustregion, z̃, γ * (z̃₋ - z̃))
+            γ = (Δf ⋅ f) / Δf²
+            Δz = bound(trustregion, z̃, γ * (z̃ - z̃₋))
         end
 
-        if eachisless(0, Δz) && eachisless(0, f) && eachisless(0, f₋)
+        if eachisless(Δz, 0) && eachisless(0, f) && eachisless(0, f₋)
             if c < 1
                 Δz̃ = Δz
-            elseif (c ≥ 1 && eachisless(Δz̃, Δz)) || c > 8
+            elseif (c ≥ 1 && eachisless(Δz, Δz̃)) || c > 16
                 z = f = zero(z)
                 break
             end
             c += 1
         end
+
+        z₋ = z
+        z̃₋ = z̃
+        f₋ = f
+        z = z̃ - Δz
+        z̃ = g(z)
+        f = z - z̃
+
+        verbose && @show z, f
     end
 
-    @unpack f, fˢ = avars
-    @unpack svars, Λ = kvars
-    @unpack S, Sˢ, B, w, υ = svars
-
-    @inbounds while true
-        γ = D₀ * inv(ζ∞)
-        ζ′ = ζ∞
-
-        for j in eachindex(Λ)
-            Sₑ = memory_term(B[j], γ)
-            f[j]  = ergodic_param(S[j], Sₑ)
-            fˢ[j] = ergodic_param(Sˢ[j], Sₑ)
-            Z[j] = product(w[j], f[j], fˢ[j])
-        end
-
-        ζ∞ = υ * sum(Z)
-
-        if isapprox(ζ′, ζ∞; rtol = rtol, nans = true)
-            break
-        end
-    end
-
-    avars.ζ∞[] = ζ∞
-    return avars
+    return set_ergodic_params!(avars, g.Z, g.kvars, g.D₀, z)
 end
 
-function asymptotic_mobility!(b, b′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, brtol)
-    if !isanyzero(ζ∞[])
+function asymptotic_mobility!(b, b′, ζ, dvars, kvars, auxvars, Δτ, n₀, n, rtol, brtol)
+    if !anyiszero(ζ[])
         return b[] = zero(b[])
     end
 

@@ -3,14 +3,16 @@ module Projections
 
 ### Imports
 using Reexport
-using LinearAlgebra
+using LinearAlgebra: LinearAlgebra
 @reexport using StaticArrays
 
 
 ### Exports
 export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
-       checksizes, getr, gett, getsvecornum, isanyless, isanyzero, llist,
-       lptype, product, project, reduce_dof
+       anyisless, anyiszero, checksizes, eachisless, getr, gett, getsvecornum,
+       llist, lptype, product, project, reduce_dof, ⋅
+
+const ⋅ = LinearAlgebra.dot
 
 
 ### Implemetation
@@ -126,6 +128,8 @@ Base.:*(p::AbstractProjections, v::TR) = v * p
 Base.:/(p::AbstractProjections, x::Number) = constructorname(p)(p.t / x, p.r / x)
 #
 Base.:/(v::TR, x::Number) = TR(v.t / x, v.r / x)
+#
+⋅(u::TR, v::TR) = u.t * v.t + u.r * v.t
 
 for op in (:+, :-, :*)
     for P in (:DProjections, :LDProjections, :MDProjections)
@@ -232,11 +236,18 @@ Base.one(::Type{LDProjections{0, T}}) where {T} = LDProjections(one(T))
 Base.one(::Type{LDProjections{L, T}}) where {L, T} = LDProjections(one(T), ones(SVector{L, T}))
 Base.one(p::AbstractProjections) = constructorname(p)(one(p.t), ones(p.r))
 
-isanyzero(v) = iszero(v)
-isanyzero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
+anyiszero(v) = iszero(v)
+anyiszero(v::TR{<:Number}) = iszero(v.t) || iszero(v.r)
 
-isanyless(v, x) = v < x
-isanyless(v::TR{<:Number}, x) = v.t < x || v.r < x
+anyisless(u, v) = u < v
+anyisless(u, v::TR{<:Number}) = u < v.t || u < v.r
+anyisless(u::TR{<:Number}, v) = u.t < v || u.r < v
+anyisless(u::TR{<:Number}, y::TR{<:Number}) = u.t < v.t || u.t < v.r
+
+eachisless(u, v) = u < v
+eachisless(u, v::TR{<:Number}) = u < v.t && u < v.r
+eachisless(u::TR{<:Number}, v) = u.t < v && u.r < v
+eachisless(u::TR{<:Number}, v::TR{<:Number}) = u.t < v.t && u.r < v.r
 
 function Base.isapprox(u::TR{T}, v::TR{T}; atol::Real = 0, rtol::Real = Base.rtoldefault(T),
                        nans::Bool = false) where {T <: Number}
