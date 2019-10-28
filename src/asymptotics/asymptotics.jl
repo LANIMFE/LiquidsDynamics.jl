@@ -9,7 +9,7 @@ function asymptotics(S; rtol = eps(), verbose = false)
     # Dynamical variables, memory kernel variables and auxiliar variables
     avars, kvars, D₀ = initialize_asymptotics(S)
     Z = similar(kvars.svars.w)
-    g = ζ -> fixedpoint!(Z, kvars, D₀, ζ)
+    g = FixedPoint(Z, kvars, D₀)
 
     return asymptotics!(g, avars, avars.ζ∞[]; rtol = rtol, verbose = verbose)
 end
@@ -67,7 +67,7 @@ function asymptotics!(g, avars, ζ; rtol = rtol, verbose = false)
         verbose && @show z, f
     end
 
-    return set_ergodic_params!(avars, g.Z, g.kvars, g.D₀, z)
+    return set!(avars, g.Z, g.kvars, g.D₀, z)
 end
 
 function asymptotic_mobility!(b, b′, ζ, dvars, kvars, auxvars, Δτ, n₀, n, rtol, brtol)

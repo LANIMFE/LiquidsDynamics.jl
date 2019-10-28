@@ -95,7 +95,7 @@ function ergodic_param(Sⱼ::LDProjections{1}, Sₑ)
     return LDProjections(t, SVector(r₁))
 end
 
-function set_ergodic_params!(avars, Z, kvars, D₀, ζ)
+function set!(avars::AsymptoticVars, Z, kvars, D₀, ζ)
     @unpack f, fˢ = avars
     @unpack svars, Λ = kvars
     @unpack S, Sˢ, B, w, υ = svars
@@ -106,12 +106,19 @@ function set_ergodic_params!(avars, Z, kvars, D₀, ζ)
         Sₑ = memory_term(B[j], γ)
         f[j] = ergodic_param(S[j], Sₑ)
         fˢ[j] = ergodic_param(Sˢ[j], Sₑ)
-        Z[j] = product(w[j], f[j], fˢ[j])
     end
 
     avars.ζ∞[] = ζ
     return avars
 end
+
+struct FixedPoint{U, V, W} <: Function
+    Z::U
+    kvars::V
+    D₀::W
+end
+#
+(f::FixedPoint)(ζ) = fixedpoint!(f.Z, f.kvars, f.D₀, ζ)
 
 function fixedpoint!(Z, kvars, D₀, ζ)
     @unpack svars, Λ = kvars

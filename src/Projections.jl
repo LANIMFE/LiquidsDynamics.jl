@@ -3,7 +3,7 @@ module Projections
 
 ### Imports
 using Reexport
-using LinearAlgebra: LinearAlgebra
+using LinearAlgebra: LinearAlgebra, UniformScaling
 @reexport using StaticArrays
 
 
