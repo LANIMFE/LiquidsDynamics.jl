@@ -34,7 +34,7 @@ function asymptotics!(g, avars, ζ; rtol = rtol, verbose = false)
     trustregion = EllipsoidalRegion()
 
     while true
-        if iszero(f) || isapprox(z, z̃; rtol = rtol, nans = true)
+        if isapprox(z, z̃; rtol = rtol, nans = true) || isapprox(z₋, z; rtol = rtol, nans = true)
             break
         end
 
@@ -50,7 +50,7 @@ function asymptotics!(g, avars, ζ; rtol = rtol, verbose = false)
         if eachisless(Δz, 0) && eachisless(0, f) && eachisless(0, f₋)
             if c < 1
                 Δz̃ = Δz
-            elseif (c ≥ 1 && eachisless(Δz, Δz̃)) || c > 16
+            elseif (c ≥ 8 && eachisless(Δz, Δz̃)) || c > 16
                 z = f = zero(z)
                 break
             end
