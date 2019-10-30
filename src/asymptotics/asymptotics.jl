@@ -14,12 +14,12 @@ function asymptotics(S; rtol = eps(), verbose = false)
     return asymptotics!(g, avars, avars.ζ∞[]; rtol = rtol, verbose = verbose)
 end
 
-function asymptotics!(g, avars, ζ; rtol = rtol, verbose = false)
+function asymptotics!(g, avars, ζ; rtol = eps(), verbose = false)
     # Initialize Anderson Acceleration (AA). We use only the previous point,
     # that is, we set `m = 1` in the AA algorithm.
     # TODO: Try AA with `m = 2`.
-    z₋ = ζ
-    z̃₋ = g(ζ)
+    z₋ = g(ζ)
+    z̃₋ = g(z₋)
     f₋ = z₋ - z̃₋
     z = z̃₋
     z̃ = g(z)
