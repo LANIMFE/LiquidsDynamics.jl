@@ -1,3 +1,46 @@
+abstract type TrustRegion end
+
+struct RectangularRegion <: TrustRegion end
+struct EllipsoidalRegion <: TrustRegion end
+
+const Φ = 1 / MathConstants.φ
+
+function bound(::TrustRegion, z, Δz)
+    if Δz > z
+        return Φ * z
+    end
+    return Δz
+end
+#
+function bound(::RectangularRegion, z::TR, Δz)
+    steeper = Δz.r * z.t - Δz.t * z.r > 0
+    if Δz.r > z.r && steeper
+        zʳ = Φ * z.r
+        return TR((Δz.t / Δz.r) * zʳ, zʳ)
+    end
+    if Δz.t > z.t && !steeper
+        zᵗ = Φ * z.t
+        return TR(zᵗ, (Δz.r / Δz.t) * zᵗ)
+    end
+    return Δz
+end
+#
+function bound(::EllipsoidalRegion, z::TR, Δz)
+    if iszero(z.r)
+        return TR(min(Δz.t, Φ * z.t), z.r)
+    end
+    if iszero(z.t)
+        return TR(z.t, min(Δz.r, Φ * z.r))
+    end
+    zᵗ = Δz.t / z.t
+    zʳ = Δz.r / z.r
+    r = hypot(zᵗ, zʳ)
+    if r > 1
+        return TR(z.t * (zᵗ / r), z.r * (zʳ / r))
+    end
+    return Δz
+end
+
 function asymptotics_weights!(w, ws, K, S, d, grid)
     # We write `(1 .- inv.(S)).^2 .* S` instead of `(S .- 1).^2 .* inv.(S)`
     # to get `w[j] == Inf` instead of `NaN` whenever `S[j] == Inf`.
@@ -50,4 +93,45 @@ function ergodic_param(Sⱼ::LDProjections{1}, Sₑ)
         r₁ = Sⱼ.r[1] / (Sⱼ.r[1] + Sₑ.r)
     end
     return LDProjections(t, SVector(r₁))
+end
+
+function set!(avars::AsymptoticVars, Z, kvars, D₀, ζ)
+    @unpack f, fˢ = avars
+    @unpack svars, Λ = kvars
+    @unpack S, Sˢ, B, w, υ = svars
+
+    γ = D₀ * inv(ζ)
+
+    @inbounds for j in eachindex(Λ)
+        Sₑ = memory_term(B[j], γ)
+        f[j] = ergodic_param(S[j], Sₑ)
+        fˢ[j] = ergodic_param(Sˢ[j], Sₑ)
+    end
+
+    avars.ζ∞[] = ζ
+    return avars
+end
+
+struct FixedPoint{U, V, W} <: Function
+    Z::U
+    kvars::V
+    D₀::W
+end
+#
+(f::FixedPoint)(ζ) = fixedpoint!(f.Z, f.kvars, f.D₀, ζ)
+
+function fixedpoint!(Z, kvars, D₀, ζ)
+    @unpack svars, Λ = kvars
+    @unpack S, Sˢ, B, w, υ = svars
+
+    γ = D₀ * inv(ζ)
+
+    @inbounds for j in eachindex(Λ)
+        Sₑ = memory_term(B[j], γ)
+        f = ergodic_param(S[j], Sₑ)
+        fˢ = ergodic_param(Sˢ[j], Sₑ)
+        Z[j] = product(w[j], f, fˢ)
+    end
+
+    return υ * sum(Z)
 end

@@ -1,47 +1,77 @@
-"""    asymptotics(S; rtol = sqrt(eps()))
+"""    asymptotics(S; rtol = eps())
 
 Computes the ergodic parameters and asymptotic value of the memory kernel of
 the Generalized Langevin Equation.  The precision of the method can be
 controlled by the keyword argument `rtol`, which sets the relative tolerance
 for asymptotic value ot the memory function, `ζ∞`.
 """
-function asymptotics(S; rtol = sqrt(eps()))
+function asymptotics(S; rtol = eps(), verbose = false)
     # Dynamical variables, memory kernel variables and auxiliar variables
     avars, kvars, D₀ = initialize_asymptotics(S)
     Z = similar(kvars.svars.w)
+    g = FixedPoint(Z, kvars, D₀)
 
-    return asymptotics!(avars, kvars, Z, D₀, avars.ζ∞[], rtol)
+    return asymptotics!(g, avars, avars.ζ∞[]; rtol = rtol, verbose = verbose)
 end
 
-function asymptotics!(avars, kvars, Z, D₀, ζ∞, rtol)
-    @unpack f, fˢ = avars
-    @unpack svars, Λ = kvars
-    @unpack S, Sˢ, B, w, υ = svars
+function asymptotics!(g, avars, ζ; rtol = eps(), verbose = false)
+    # Initialize Anderson Acceleration (AA). We use only the previous point,
+    # that is, we set `m = 1` in the AA algorithm.
+    # TODO: Try AA with `m = 2`.
+    z₋ = g(ζ)
+    z̃₋ = g(z₋)
+    f₋ = z₋ - z̃₋
+    z = z̃₋
+    z̃ = g(z)
+    f = z - z̃
 
-    @inbounds while true
-        γ = D₀ * inv(ζ∞)
-        ζ′ = ζ∞
+    # Counter to keep track of how many times the sequence regresses whenever
+    # `f₋, f` are positive.
+    c = 0
+    # AA step and reference value to check when the sequence regresses.
+    Δz = Δz̃ = zero(z)
+    # A trust region is used to ensure positive-definiteness of the solution.
+    trustregion = EllipsoidalRegion()
 
-        for j in eachindex(Λ)
-            Sₑ = memory_term(B[j], γ)
-            f[j]  = ergodic_param(S[j], Sₑ)
-            fˢ[j] = ergodic_param(Sˢ[j], Sₑ)
-            Z[j] = product(w[j], f[j], fˢ[j])
-        end
-
-        ζ∞ = υ * sum(Z)
-
-        if isapprox(ζ′, ζ∞; rtol = rtol, nans = true)
+    while true
+        if isapprox(z, z̃; rtol = rtol, nans = true) || isapprox(z₋, z; rtol = rtol, nans = true)
             break
         end
+
+        Δf = f - f₋
+        Δf² = Δf ⋅ Δf
+        if iszero(Δf²)
+            Δz = zero(Δz)
+        else
+            γ = (Δf ⋅ f) / Δf²
+            Δz = bound(trustregion, z̃, γ * (z̃ - z̃₋))
+        end
+
+        if eachisless(Δz, 0) && eachisless(0, f) && eachisless(0, f₋)
+            if c < 1
+                Δz̃ = Δz
+            elseif (c ≥ 8 && eachisless(Δz, Δz̃)) || c > 16
+                z = f = zero(z)
+                break
+            end
+            c += 1
+        end
+
+        z₋ = z
+        z̃₋ = z̃
+        f₋ = f
+        z = z̃ - Δz
+        z̃ = g(z)
+        f = z - z̃
+
+        verbose && @show z, f
     end
 
-    avars.ζ∞[] = ζ∞
-    return avars
+    return set!(avars, g.Z, g.kvars, g.D₀, z)
 end
 
-function asymptotic_mobility!(b, b′, ζ∞, dvars, kvars, auxvars, Δτ, n₀, n, rtol, brtol)
-    if !isanyzero(ζ∞[])
+function asymptotic_mobility!(b, b′, ζ, dvars, kvars, auxvars, Δτ, n₀, n, rtol, brtol)
+    if !anyiszero(ζ[])
         return b[] = zero(b[])
     end
 

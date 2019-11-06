@@ -61,7 +61,8 @@ function dynamics!(dvars, kvars, auxvars, S, k, t, Δτ, n₀, n, rtol, brtol)
     # convergence of `b` up to relative precision `brtol`, but no longer store
     # the solutions to the SCGLE.
     avars, akvars, D₀ = initialize_asymptotics(S)
-    asymptotics!(avars, akvars, auxvars.Z, D₀, last(dvars.ζ), rtol)
+    g = FixedPoint(auxvars.Z, akvars, D₀)
+    asymptotics!(g, avars, last(dvars.ζ); rtol = rtol)
     asymptotic_mobility!(output.b, b′, avars.ζ∞, dvars, kvars, auxvars,
                          Δτ, n₀, n, rtol, brtol)
 
