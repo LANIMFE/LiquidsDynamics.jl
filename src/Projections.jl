@@ -9,7 +9,7 @@ using LinearAlgebra: LinearAlgebra, UniformScaling
 
 ### Exports
 export DProjections, LDProjections, MDProjections, TR, TvR, TRv,
-       anyisless, anyiszero, checksizes, eachisless, getr, gett, getsvecornum,
+       anyisless, anyiszero, checksizes, eachisless, getr, gett,
        llist, lptype, product, project, reduce_dof, ⋅
 
 const ⋅ = LinearAlgebra.dot

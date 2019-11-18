@@ -14,7 +14,7 @@ function initialize_asymptotics(structure)
     Sˢ = onesof(S)
     d  = dimensionality(liquid)
     w  = weights(Asymptotics, K, S, d, grid)
-    υ  = weight(one(D₀), liquid.η, d, grid)
+    υ  = weight(one(D₀), volume_fraction(liquid), d, grid)
     Λ  = lambdaof(liquid).(K)
     B  = K.^2 ./ gett.(Λ)
     Bˢ = nothing
