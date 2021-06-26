@@ -1,7 +1,7 @@
 name = "LiquidsDynamics"
 uuid = "ee594226-bf90-11e9-0512-4d00cc65c9b3"
 authors = ["Pablo Zubieta"]
-version = "0.0.0"
+version = "0.1.0"
 
 [compat]
 julia = "≥ 1.0.0"
