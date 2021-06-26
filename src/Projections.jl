@@ -275,7 +275,7 @@ end
 
 reduce_dof(v) = v
 reduce_dof(v::TR) = v.t + v.r
-reduce_dof(v::TRv) = LDProjections(v.t, v.t + v.r)
+reduce_dof(v::TRv) = LDProjections(v.t, v.t .+ v.r)
 
 lptype(::Type{DProjections{0, T}}) where {T} = LDProjections{0, T}
 lptype(::Type{DProjections{2, T}}) where {T} = LDProjections{1, T}
