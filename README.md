@@ -1,7 +1,24 @@
-# LiquidsDynamics
+# LiquidsDynamics.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanimfe.github.io/LiquidsDynamics.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://lanimfe.github.io/LiquidsDynamics.jl/dev)
-[![Build Status](https://travis-ci.com/lanimfe/LiquidsDynamics.jl.svg?branch=master)](https://travis-ci.com/lanimfe/LiquidsDynamics.jl)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/lanimfe/LiquidsDynamics.jl?svg=true)](https://ci.appveyor.com/project/lanimfe/LiquidsDynamics-jl)
-[![Codecov](https://codecov.io/gh/lanimfe/LiquidsDynamics.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/lanimfe/LiquidsDynamics.jl)
+[![GitHub Actions](https://github.com/LANIMFE/LiquidsDynamics.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/LANIMFE/LiquidsDynamics.jl/actions?query=workflow%3ACI)
+
+This library intended to provide a mean to compute the intermediate scattering function
+<img src="https://render.githubusercontent.com/render/math?math=F(k,t)"> and its self
+component from the Self Consistent Generalized Langevin Equation (SCGLE) formalism in the
+[Julia](http://julialang.org) programming language.
+
+## Installation
+
+`LiquidsDynamics.jl` is compatible with Julia 1.0 and later versions. It requires first
+adding the [LANIMFE-Registy](https://github.com/LANIMFE/LANIMFE-Registry) to your Julia
+installation. Then it can simply be installed by running
+
+```julia
+julia> ]
+pkg> add LiquidsDynamics
+```
+
+## Acknowledgements
+
+This project was developed with support from CONACYT through the Laboratorio
+Nacional de Ingeniería de la Materia Fuera de Equilibrio (LANIMFE).
