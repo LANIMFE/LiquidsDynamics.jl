@@ -45,12 +45,12 @@ jobs:
             ${{ runner.os }}-${{ matrix.arch }}-test-
             ${{ runner.os }}-${{ matrix.arch }}-
             ${{ runner.os }}-
-      - name: instantiate
+      - name: Install General registry
         run: julia -e 'using Pkg; Pkg.instantiate()'
-      - name: registry_add(unix)
+      - name: Add LANIMFE registry (unix)
         if: ${{matrix.os == 'ubuntu-latest' || matrix.os == 'macOS-latest'}}
         run: git clone https://github.com/LANIMFE/LANIMFE-Registry ~/.julia/registries/LANIMFE
-      - name: registry_add(windows)
+      - name: Add LANIMFE registry (windows)
         if: ${{matrix.os == 'windows-latest'}}
         run: git clone https://github.com/LANIMFE/LANIMFE-Registry %USERPROFILE%\.julia\registries\LANIMFE
         shell: cmd
