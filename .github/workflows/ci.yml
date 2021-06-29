@@ -45,6 +45,8 @@ jobs:
             ${{ runner.os }}-${{ matrix.arch }}-test-
             ${{ runner.os }}-${{ matrix.arch }}-
             ${{ runner.os }}-
+      - name: instantiate
+        run: julia -e 'using Pkg; Pkg.instantiate()'
       - name: registry_add(unix)
         if: ${{matrix.os == 'ubuntu-latest' || matrix.os == 'macOS-latest'}}
         run: git clone https://github.com/LANIMFE/LANIMFE-Registry ~/.julia/registries/LANIMFE
