@@ -3,10 +3,10 @@ abstract type TrustRegion end
 struct RectangularRegion <: TrustRegion end
 struct EllipsoidalRegion <: TrustRegion end
 
-const Φ = 1 / MathConstants.φ
+const Φ = 1 / 4  # MathConstants.φ
 
 function bound(::TrustRegion, z, Δz)
-    if Δz > z
+    if 2Δz > z
         return Φ * z
     end
     return Δz
@@ -14,11 +14,11 @@ end
 #
 function bound(::RectangularRegion, z::TR, Δz)
     steeper = Δz.r * z.t - Δz.t * z.r > 0
-    if Δz.r > z.r && steeper
+    if 2Δz.r > z.r && steeper
         zʳ = Φ * z.r
         return TR((Δz.t / Δz.r) * zʳ, zʳ)
     end
-    if Δz.t > z.t && !steeper
+    if 2Δz.t > z.t && !steeper
         zᵗ = Φ * z.t
         return TR(zᵗ, (Δz.r / Δz.t) * zᵗ)
     end
